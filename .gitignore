@@ -1,0 +1,122 @@
+## Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+bin/
+var/
+sdist/
+wheels/
+share/python-wheels/
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
+.Python
+env/
+venv/
+ENV/
+.env
+.venv
+venv.bak/
+instance/
+.pytest_cache/
+.coverage
+.coverage.*
+mypy_cache/
+.mypy_cache/
+.cache/
+__pypackages__/
+
+## Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+dist/
+build/
+.turbo/
+
+## VS Code
+.vscode/
+.history/
+
+## OS
+.DS_Store
+Thumbs.db
+
+## Env files
+*.env
+*.env.*
+
+## Python virtualenvs under project
+backend/.venv/
+backend/venv/
+
+## Frontend build outputs
+frontend/dist/
+frontend/build/
+
+## Logs
+.log
+logs/
+
+## JetBrains
+.idea/
+
+## Coverage
+.coverage
+htmlcov/
+
+## Celery
+celerybeat-schedule
+
+## Misc
+*.sqlite3
+*.db
+# Environment
+.env
+.env.local
+.env.production
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Node
+node_modules/
+dist/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Coverage
+.coverage
+htmlcov/
+
+# Misc
+*.sqlite3

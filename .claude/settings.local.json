@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npx vite:*)",
+      "Bash(python -c \"from app.main import app; print\\(''Backend imports OK''\\); from app.services.ai_service import generate_soul_reading; print\\(''AI service OK''\\); from app.services.weather_service import _derive_beauty_recs; print\\(''Weather service OK''\\); from app.tasks.celery_app import celery_app; print\\(''Celery OK''\\)\")",
+      "Bash(python -c \"import py_compile; py_compile.compile\\(''app/routers/sessions.py'', doraise=True\\); py_compile.compile\\(''app/routers/queue.py'', doraise=True\\); print\\(''OK''\\)\")",
+      "Bash(python -c \":*)",
+      "Bash(pip list:*)",
+      "Bash(python:*)"
+    ]
+  }
+}
