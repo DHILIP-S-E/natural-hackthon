@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Sparkles, Heart, Calendar, BookOpen, Award, TrendingUp, Sun, Droplets, Wind, Eye, Star, Shield } from 'lucide-react';
+import { Sparkles, Heart, Calendar, BookOpen, Award, TrendingUp, Sun, Droplets, Wind, Eye, Star, Shield, Smile } from 'lucide-react';
 import BeautyScoreRing from '../../components/BeautyScoreRing';
 import { TiltCard } from '../../components/ui/TiltCard';
 import { Icon3D } from '../../components/ui/Icon3D';
@@ -19,56 +19,46 @@ export default function CustomerDashboard() {
   const user = useAuthStore((s) => s.user);
   const customerId = user?.id || 'me';
 
-  // Fetch customer profile
-  const { data: profileData, isLoading: profileLoading } = useQuery({
-    queryKey: ['customer-profile', customerId],
-    queryFn: () => api.get('/customers/' + customerId).then(r => r.data?.data),
+  // Fetch unified customer passport
+  const { data: p, isLoading: pLoading } = useQuery({
+    queryKey: ['beauty-passport-full', customerId],
+    queryFn: () => api.get(`/agents/track3/passport/full?customer_id=${customerId}`).then(r => r.data?.data),
   });
 
-  // Fetch recent bookings (for journey timeline)
-  const { data: bookingsData, isLoading: bookingsLoading } = useQuery({
-    queryKey: ['customer-bookings-recent'],
-    queryFn: () => api.get('/bookings?page=1&per_page=5').then(r => {
-      const d = r.data?.data;
-      return Array.isArray(d) ? d : d?.bookings || d?.items || [];
-    }),
+  // Fetch next best recommendation
+  const { data: rec } = useQuery({
+    queryKey: ['next-best-recommendation', customerId],
+    queryFn: () => api.get(`/agents/track3/recommendations/next-best?customer_id=${customerId}`).then(r => r.data?.data),
   });
 
   // Fetch climate data for customer's city
-  const customerCity = profileData?.city || '';
+  const customerCity = p?.profile?.city || '';
   const { data: climateData } = useQuery({
     queryKey: ['climate', customerCity],
     queryFn: () => api.get('/climate?city=' + encodeURIComponent(customerCity)).then(r => r.data?.data),
     enabled: !!customerCity,
   });
 
+  const latestJournal = p?.soulskin?.history?.[0];
+  const latestMood = p?.soulskin?.history?.[0]; 
+
   // Map API profile to the shape the UI expects
-  const CUSTOMER = profileData ? {
-    name: profileData.name || `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || '',
-    beautyScore: profileData.beauty_score ?? 0,
-    passport: profileData.passport_completeness ?? 0,
-    hair: {
-      type: profileData.hair_type || '--',
-      texture: profileData.hair_texture || '--',
-      color: profileData.natural_hair_color || '--',
-      damage: profileData.hair_damage_level ?? 0,
-    },
-    skin: {
-      type: profileData.skin_type || '--',
-      tone: profileData.skin_tone || '--',
-      undertone: profileData.undertone || '--',
-      concerns: profileData.primary_skin_concerns?.length ? profileData.primary_skin_concerns : [],
-    },
-    archetype: profileData.dominant_archetype || 'bloom',
-    allergies: profileData.known_allergies?.length ? profileData.known_allergies : [],
-    goal: profileData.primary_goal || '',
-    goalProgress: profileData.goal_progress_pct ?? 0,
-    visits: profileData.total_visits ?? 0,
-    ltv: profileData.lifetime_value ?? 0,
-    city: profileData.city || '',
-    uv: climateData?.uv_index ?? profileData.local_uv_index ?? 0,
-    humidity: climateData?.humidity_pct ?? profileData.local_humidity ?? 0,
-    aqi: climateData?.aqi ?? profileData.local_aqi ?? 0,
+  const CUSTOMER = p ? {
+    name: p.profile.name || `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || '',
+    beautyScore: p.profile.beauty_score ?? 0,
+    passport: p.profile.passport_completeness ?? 0,
+    hair: p.hair || { type: '--', texture: '--', color: '--', damage: 0 },
+    skin: p.skin || { type: '--', tone: '--', undertone: '--', concerns: [] },
+    archetype: p.profile.dominant_archetype || 'bloom',
+    allergies: p.profile.known_allergies || [],
+    goal: p.profile.primary_goal || '',
+    goalProgress: p.profile.goal_progress_pct ?? 0,
+    visits: p.profile.total_visits ?? 0,
+    ltv: p.profile.lifetime_value ?? 0,
+    city: p.profile.city || '',
+    uv: climateData?.uv_index ?? 0,
+    humidity: climateData?.humidity_pct ?? 0,
+    aqi: climateData?.aqi ?? 0,
   } : {
     name: `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || '',
     beautyScore: 0, passport: 0,
@@ -81,15 +71,15 @@ export default function CustomerDashboard() {
     city: '', uv: 0, humidity: 0, aqi: 0,
   };
 
-  // Map bookings to journey entries
-  const JOURNEY = (Array.isArray(bookingsData) ? bookingsData : []).map((b: any) => ({
-    date: b.scheduled_at ? new Date(b.scheduled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '',
-    service: b.service_name || b.service || 'Service',
-    archetype: b.archetype || b.soulskin_archetype || 'bloom',
-    rating: b.customer_rating ?? b.rating ?? 5,
+  // Map agent services to journey entries
+  const JOURNEY = (p?.last_5_services || []).map((b: any) => ({
+    date: b.date ? new Date(b.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '',
+    service: b.service_name || 'Service',
+    archetype: b.archetype_applied || 'bloom',
+    rating: b.quality_score ? Math.round(b.quality_score / 20) : 5,
   }));
 
-  const isLoading = profileLoading && !profileData;
+  const isLoading = pLoading && !p;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xl)' }}>
@@ -119,6 +109,14 @@ export default function CustomerDashboard() {
                 );
               })()}
               <span className="badge badge-teal" style={{ padding: '5px 12px', fontWeight: 600 }}>{CUSTOMER.visits} visits</span>
+              <div style={{ background: 'rgba(155,127,212,0.1)', border: '1px solid rgba(155,127,212,0.2)', color: '#9B7FD4', padding: '5px 12px', borderRadius: 'var(--radius-full)', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Sparkles size={12} /> Digital Twin Active
+              </div>
+              {latestMood && (
+                <div style={{ background: 'rgba(74,159,212,0.1)', border: '1px solid rgba(74,159,212,0.2)', color: '#4A9FD4', padding: '5px 12px', borderRadius: 'var(--radius-full)', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Smile size={12} /> {latestMood.detected_emotion || latestMood.word}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -128,13 +126,50 @@ export default function CustomerDashboard() {
         </div>
       </div>
 
+      {/* AI Next Best Recommendation */}
+      {rec && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <TiltCard tiltIntensity={2} className="card" style={{ background: 'linear-gradient(135deg, #1A1A24 0%, #2D1B4E 100%)', padding: '24px', border: 'none', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: -20, right: -20, opacity: 0.1 }}>
+              <Sparkles size={120} color="#9B7FD4" />
+            </div>
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#9B7FD4', marginBottom: 16 }}>
+                <TrendingUp size={16} />
+                <span style={{ fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.1em' }}>AI NEXT BEST VISIT</span>
+                <span className="badge badge-teal" style={{ marginLeft: 'auto', background: '#2A9D8F33', border: '1px solid #2A9D8F50', color: '#2A9D8F' }}>
+                  Urgency: {rec.urgency_score}/10
+                </span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24 }}>
+                <div>
+                  <h3 style={{ color: '#fff', fontSize: '1.5rem', marginBottom: 8 }}>{rec.recommended_service}</h3>
+                  <p style={{ color: '#9B99B0', fontSize: '0.9rem', lineHeight: 1.6, maxWidth: 500 }}>{rec.reasoning}</p>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, justifyContent: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <Calendar size={16} color="#4A9FD4" />
+                    <span style={{ color: '#F0EEF8', fontSize: '0.9rem', fontWeight: 600 }}>{rec.suggested_date_window}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <Sparkles size={16} color="#E8A87C" />
+                    <span style={{ color: '#F0EEF8', fontSize: '0.9rem' }}>Archetype: <strong>{rec.recommended_archetype.toUpperCase()}</strong></span>
+                  </div>
+                  <button className="btn btn-primary" style={{ width: 'fit-content', marginTop: 8 }}>Book Recommended Session</button>
+                </div>
+              </div>
+            </div>
+          </TiltCard>
+        </motion.div>
+      )}
+
       {/* Quick KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 'var(--space-md)' }}>
         {[
-          { label: 'Next Visit', value: 'Mar 25', icon: Calendar, color: '#2A9D8F' },
-          { label: 'Goal Progress', value: `${CUSTOMER.goalProgress}%`, icon: TrendingUp, color: '#f44f9a' },
-          { label: 'Passport', value: `${CUSTOMER.passport}%`, icon: Award, color: '#9B7FD4' },
-          { label: 'Soul Journal', value: `${JOURNEY.length}`, icon: Heart, color: '#E8A87C' },
+          { label: 'Next Visit', value: rec?.suggested_date_window?.split(' ')[1] || 'TBD', icon: Calendar, color: '#2A9D8F' },
+          { label: 'Confidence', value: `${(CUSTOMER.beautyScore ?? 0) + 10}%`, icon: TrendingUp, color: '#f44f9a' },
+          { label: 'Passport', value: `${CUSTOMER.passport}%`, icon: Award, color: '#9B99B0' },
+          { label: 'Journal', value: `${(p?.soulskin?.history ?? []).length}`, icon: Heart, color: '#E8A87C' },
         ].map((k, i) => {
           const Icon = k.icon;
           return (
@@ -301,19 +336,33 @@ export default function CustomerDashboard() {
             </div>
 
             <div style={{ maxWidth: 460, margin: '0 auto' }}>
-              <div className="card" style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(155,127,212,0.25)', padding: '32px' }}>
-                <p style={{ fontStyle: 'italic', color: '#F0EEF8', marginBottom: 24, fontSize: '1.1rem', lineHeight: 1.6 }}>
-                  "You are currently in full bloom. Something new is opening inside you — a celebration, a beginning, a joy that has been waiting."
-                </p>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-                  {(() => { const BloomIcon = ARCH_DATA.bloom.icon; return <BloomIcon size={24} color="#E8A87C" />; })()}
-                  <span style={{ fontSize: '1rem', fontWeight: 700, color: '#E8A87C', letterSpacing: '0.05em' }}>BLOOM</span>
+              {!latestJournal ? (
+                <div style={{ padding: '32px', textAlign: 'center', color: '#9B99B0' }}>
+                  No soul journal entries yet. Complete a SOULSKIN session to see your first reading.
                 </div>
-                <p style={{ fontSize: '0.75rem', color: '#5C5A70', marginTop: 12, letterSpacing: '0.1em' }}>LAST READING: MARCH 15, 2026</p>
-              </div>
+              ) : (
+                <div className="card" style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(155,127,212,0.25)', padding: '32px' }}>
+                  <p style={{ fontStyle: 'italic', color: '#F0EEF8', marginBottom: 24, fontSize: '1.1rem', lineHeight: 1.6 }}>
+                    "{latestJournal.soul_reading}"
+                  </p>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                    {(() => {
+                      const arch = ARCH_DATA[latestJournal.archetype as keyof typeof ARCH_DATA] || ARCH_DATA.bloom;
+                      const ArchIcon = arch.icon;
+                      return <ArchIcon size={24} color={arch.color} />;
+                    })()}
+                    <span style={{ fontSize: '1rem', fontWeight: 700, color: (ARCH_DATA[latestJournal.archetype as keyof typeof ARCH_DATA] || ARCH_DATA.bloom).color, letterSpacing: '0.05em' }}>
+                      {(latestJournal.archetype || 'bloom').toUpperCase()}
+                    </span>
+                  </div>
+                  <p style={{ fontSize: '0.75rem', color: '#5C5A70', marginTop: 12, letterSpacing: '0.1em' }}>
+                    LAST READING: {new Date(latestJournal.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase()}
+                  </p>
+                </div>
+              )}
             </div>
 
-            <button className="btn btn-violet btn-lg" style={{ marginTop: 32 }}>
+            <button className="btn btn-violet btn-lg" style={{ marginTop: 32 }} onClick={() => window.location.href = '/app/soulskin'}>
               <Sparkles size={16} /> Start New Session
             </button>
           </motion.div>
@@ -321,7 +370,7 @@ export default function CustomerDashboard() {
 
         {activeTab === 'journey' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            {bookingsLoading && !bookingsData ? (
+            {pLoading && !p ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '16px 0' }}>
                 {[1, 2, 3].map(i => (
                   <div key={i} style={{ display: 'flex', gap: 20, padding: '16px 0' }}>
@@ -339,7 +388,7 @@ export default function CustomerDashboard() {
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                {JOURNEY.map((j, i) => (
+                {JOURNEY.map((j: { service: string; archetype: string; rating: number; date: string }, i: number) => (
                   <div key={i} style={{ display: 'flex', gap: 20, padding: '16px 0', borderBottom: '1px solid var(--border-subtle)' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 40, flexShrink: 0 }}>
                       <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#f44f9a' }} />

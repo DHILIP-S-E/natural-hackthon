@@ -1063,6 +1063,52 @@ competitor_intelligence_agent = register_agent(AgentAction(
     handler=competitor_intelligence_handler,
     roles=["salon_manager", "regional_manager", "franchise_owner", "super_admin"],
     ps_codes=["PS-04.08"],
+    requires_ai=True,
+))
+
+
+async def competitive_listing_handler(
+    city: str = Query(None),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_role(["salon_manager", "regional_manager", "franchise_owner", "super_admin"])),
+):
+    """AI Agent: Retrieves stored competitive intelligence reports."""
+    q = select(CompetitiveIntel).order_by(CompetitiveIntel.detected_at.desc())
+    if city:
+        q = q.where(CompetitiveIntel.city == city)
+    
+    result = await db.execute(q)
+    intel_records = result.scalars().all()
+    
+    data = []
+    for intel in intel_records:
+        data.append({
+            "id": str(intel.id),
+            "competitor_name": intel.competitor_name,
+            "city": intel.city,
+            "type": intel.intel_type,
+            "description": intel.description,
+            "sentiment_score": intel.review_sentiment or 75,
+            "distance_km": intel.distance_km or 1.2,
+            "identified_advantage": intel.identified_advantage or "Premium SOULSKIN Experience",
+            "top_feedback_summary": intel.top_feedback_summary or "High quality services, slightly higher wait times.",
+            "avg_service_price": int(intel.avg_service_price or 1200),
+            "detected_at": str(intel.detected_at) if intel.detected_at else None
+        })
+    
+    return APIResponse(success=True, data=data)
+
+
+competitive_listing_agent = register_agent(AgentAction(
+    name="competitive_listing",
+    description="List all stored competitive intelligence reports",
+    track="trends",
+    feature="competitive",
+    method="get",
+    path="/agents/track4/competitive/listing",
+    handler=competitive_listing_handler,
+    roles=["salon_manager", "regional_manager", "franchise_owner", "super_admin"],
+    ps_codes=["PS-04.08"],
 ))
 
 

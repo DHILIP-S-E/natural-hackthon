@@ -436,6 +436,13 @@ class MirrorSessionOut(BaseModel):
         from_attributes = True
 
 
+class MirrorSessionUpdate(BaseModel):
+    session_type: Optional[str] = None
+    tryons: Optional[dict] = None
+    saved_images: Optional[list] = None
+    final_selection: Optional[dict] = None
+
+
 # ── Mood ──
 class MoodCreate(BaseModel):
     customer_id: UUID

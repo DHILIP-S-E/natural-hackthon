@@ -10,6 +10,7 @@ import {
   Map, Shield, Brain, Activity, Home, BookOpenCheck, Scan,
   Heart, Route, User
 } from 'lucide-react';
+import AuraPulse from '../AuraPulse';
 import type { UserRole } from '../../types';
 
 interface NavItem {
@@ -21,14 +22,14 @@ interface NavItem {
 
 const navItems: Record<string, NavItem[]> = {
   customer: [
-    { to: '/app/dashboard', icon: <Home size={20} />, label: 'Home' },
-    { to: '/app/passport', icon: <BookOpenCheck size={20} />, label: 'Passport' },
-    { to: '/app/mirror', icon: <Scan size={20} />, label: 'Mirror' },
+    { to: '/app/dashboard', icon: <Home size={20} />, label: 'AURA Home' },
+    { to: '/app/passport', icon: <BookOpenCheck size={20} />, label: 'AI Beauty Passport' },
+    { to: '/app/mirror', icon: <Scan size={20} />, label: 'AURA AI Mirror' },
     { to: '/app/bookings', icon: <Calendar size={20} />, label: 'Bookings' },
-    { to: '/app/journey', icon: <Route size={20} />, label: 'Journey' },
-    { to: '/app/soulskin', icon: <Sparkles size={20} />, label: 'SOULSKIN' },
-    { to: '/app/homecare', icon: <Heart size={20} />, label: 'Homecare' },
-    { to: '/app/profile', icon: <User size={20} />, label: 'Profile' },
+    { to: '/app/journey', icon: <Route size={20} />, label: 'AI Journey & Goals' },
+    { to: '/app/soulskin', icon: <Sparkles size={20} />, label: 'SOULSKIN AI' },
+    { to: '/app/homecare', icon: <Heart size={20} />, label: 'AI Homecare' },
+    { to: '/app/profile', icon: <User size={20} />, label: 'My Profile' },
   ],
   stylist: [
     { to: '/stylist/dashboard', icon: <LayoutDashboard size={20} />, label: 'Today' },
@@ -157,7 +158,18 @@ export default function Sidebar() {
             })}
           >
             {item.icon}
-            {!collapsed && <span>{item.label}</span>}
+            {!collapsed && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flex: 1 }}>
+                <span>{item.label}</span>
+                {item.label.toLowerCase().includes('ai') && (
+                  <motion.div
+                    animate={{ opacity: [0.4, 1, 0.4] }}
+                    transition={{ repeat: Infinity, duration: 2 }}
+                    style={{ width: 6, height: 6, borderRadius: '50%', background: '#f44f9a', boxShadow: '0 0 8px #f44f9a' }}
+                  />
+                )}
+              </div>
+            )}
           </NavLink>
         ))}
       </nav>
@@ -229,6 +241,7 @@ export function DashboardLayout() {
             </ErrorBoundary>
           </motion.div>
         </AnimatePresence>
+        <AuraPulse />
       </main>
     </div>
   );

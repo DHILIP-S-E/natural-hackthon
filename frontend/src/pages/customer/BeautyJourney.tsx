@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import api from '../../config/api';
 import BeautyScoreRing from '../../components/BeautyScoreRing';
+import { useAuthStore } from '../../stores/authStore';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ARCH_DATA } from '../../constants/archetypes';
 
 type TabKey = 'salon' | 'homecare' | 'products' | 'progress';
@@ -20,23 +22,93 @@ const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
 
 export default function BeautyJourney() {
   const [activeTab, setActiveTab] = useState<TabKey>('salon');
+  const customerId = 'me'; // Use 'me' alias for current user's profile resolution
+  const queryClient = useQueryClient();
 
+  // Fetch active journey
   const { data: journeyData, isLoading } = useQuery({
-    queryKey: ['beauty-journey'],
-    queryFn: () => api.get('/journey/').then(r => {
-      const items = r.data?.data;
-      if (Array.isArray(items) && items.length > 0) return items[0];
-      if (items && !Array.isArray(items)) return items;
-      return null;
-    }),
+    queryKey: ['beauty-journey', customerId],
+    queryFn: async () => {
+      const resp = await api.get(`/journey/${customerId}`);
+      const data = resp.data?.data;
+      return data;
+    },
+    enabled: !!customerId,
+  });
+
+  // Fetch AI Beauty Passport (Track 3)
+  const { data: passport } = useQuery({
+    queryKey: ['beauty-passport-full', customerId],
+    queryFn: async () => {
+      const res = await api.get(`/agents/track3/passport/full?customer_id=${customerId}`);
+      return res.data.data;
+    },
+    enabled: !!customerId,
+  });
+
+  // Fetch journey progress
+  const { data: progressInfo } = useQuery({
+    queryKey: ['beauty-journey-progress', customerId],
+    queryFn: async () => {
+      const resp = await api.get(`/journey/${customerId}/progress`);
+      return resp.data?.data;
+    },
+    enabled: !!customerId && !!journeyData,
+  });
+
+  // Generate new journey mutation
+  const generateMutation = useMutation({
+    mutationFn: async () => {
+      console.log('[Journey] Generating for:', customerId);
+      try {
+        const response = await api.post(`/journey/generate/${customerId}`, { plan_duration_weeks: 12 });
+        console.log('[Journey] Response:', response.data);
+        return response.data;
+      } catch (err: any) {
+        console.error('[Journey] Generation failed:', err);
+        throw err;
+      }
+    },
+    onSuccess: (data: any) => {
+      if (data?.success === false) {
+        alert('Failed to generate journey: ' + (data?.message || 'Unknown error'));
+      }
+      queryClient.invalidateQueries({ queryKey: ['beauty-journey', customerId] });
+    },
+    onError: (err: any) => {
+      console.error('[Journey] Mutation error:', err);
+      alert('Error connecting to AI service. Please check if the backend is running.');
+    }
   });
 
   const plan = journeyData;
   const milestones: any[] = plan?.milestones ?? [];
-  const homecareSteps: any[] = plan?.homecare_steps ?? plan?.homecare ?? [];
-  const products: any[] = plan?.products ?? plan?.product_recommendations ?? [];
-  const progressData: any[] = plan?.progress_data ?? plan?.progress ?? [];
-  const progressPct = plan ? (plan.current_week / plan.duration_weeks) * 100 : 0;
+  const expectedOutcomes = plan?.expected_outcomes ?? {};
+  const skinProjection = plan?.skin_projection ?? {};
+  
+  // Extract all homecare tips from milestones for the homecare tab
+  const allHomecare = milestones.reduce((acc: string[], m: any) => {
+    if (Array.isArray(m.home_care)) return [...acc, ...m.home_care];
+    return acc;
+  }, []);
+
+  // Products and progress data for UI matching
+  const products: any[] = plan?.recommended_products || [];
+  const progressData: any[] = Object.entries(expectedOutcomes).map(([key, value]) => {
+    const goal = passport?.beauty_goals;
+    const isGoalMetric = key.toLowerCase().includes(goal?.primary_goal?.toLowerCase() || 'none');
+    
+    return {
+      metric: key.replace('_', ' ').toUpperCase(),
+      current: isGoalMetric ? (passport?.beauty_score || 40) : 40,
+      target: isGoalMetric ? (plan?.skin_projection?.predicted_score || 85) : 100,
+      start: isGoalMetric ? (passport?.beauty_score ? Math.max(0, passport.beauty_score - 10) : 20) : 20,
+      unit: '%',
+      description: value as string
+    };
+  });
+
+  const progressPct = progressInfo?.progress_pct ?? (plan?.generated_at ? 5 : 0);
 
   if (isLoading) {
     return (
@@ -53,9 +125,20 @@ export default function BeautyJourney() {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 400 }}>
         <div style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
-          <Target size={32} style={{ marginBottom: 12, opacity: 0.3 }} />
-          <p style={{ fontSize: '1rem' }}>No journey plan yet</p>
-          <p style={{ fontSize: '0.8rem' }}>Ask your stylist to create a beauty journey plan for you</p>
+          <Target size={48} style={{ marginBottom: 16, opacity: 0.2, color: '#f44f9a' }} />
+          <h2 style={{ color: '#1A1A24', marginBottom: 8, fontSize: '1.25rem' }}>No Journey Plan Yet</h2>
+          <p style={{ fontSize: '0.9rem', maxWidth: 300, margin: '0 auto 24px' }}>
+            Transform your beauty routine with an AI-personalized 12-week roadmap.
+          </p>
+          <button 
+            className="btn btn-primary btn-lg" 
+            onClick={() => generateMutation.mutate()}
+            disabled={generateMutation.isPending}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 10, margin: '0 auto' }}
+          >
+            <RefreshCw size={18} className={generateMutation.isPending ? 'animate-spin' : ''} /> 
+            {generateMutation.isPending ? 'Analyzing your profile...' : 'Generate My AI Journey'}
+          </button>
         </div>
       </div>
     );
@@ -69,37 +152,39 @@ export default function BeautyJourney() {
           <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Beauty Journey</p>
           <h1 style={{ fontSize: '1.75rem', fontWeight: 700 }}>My Transformation Plan</h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: 4 }}>
-            {plan.duration_weeks}-week plan &middot; Week {plan.current_week} of {plan.duration_weeks}
+            {plan.plan_duration_weeks}-week plan &middot; Week 1 of {plan.plan_duration_weeks}
           </p>
         </div>
-        <button className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <RefreshCw size={16} /> Generate New Journey Plan
+        <button 
+          className="btn btn-primary" 
+          onClick={() => generateMutation.mutate()}
+          disabled={generateMutation.isPending}
+          style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+        >
+          <RefreshCw size={16} className={generateMutation.isPending ? 'animate-spin' : ''} /> 
+          {generateMutation.isPending ? 'Generating...' : plan ? 'Regenerate Journey' : 'Generate AI Journey'}
         </button>
       </div>
 
       {/* Goal Statement + Progress Ring */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
         className="card" style={{ padding: '24px', display: 'flex', gap: 32, alignItems: 'center', borderLeft: '4px solid #f44f9a' }}>
-        <BeautyScoreRing score={plan.overall_progress} size={90} />
+        <BeautyScoreRing score={passport?.beauty_score ?? 25} size={90} />
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Goal</div>
-          <div style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: 12 }}>{plan.goal}</div>
+          <div style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: 12 }}>{plan.primary_goal}</div>
           <div style={{ display: 'flex', gap: 24 }}>
             <div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Start Score</div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{plan.beauty_score_start}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Current</div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#f44f9a' }}>{plan.beauty_score_current}</div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Status</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#f44f9a' }}>Active</div>
             </div>
             <div>
               <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Target</div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--success)' }}>{plan.beauty_score_target}</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--success)' }}>{plan.skin_projection?.predicted_score || 85}</div>
             </div>
             <div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Est. Cost</div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{'\u20B9'}{(Number(plan.estimated_cost) || 0).toLocaleString()}</div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Est. Total</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{'\u20B9'}{(Number(plan.estimated_total_cost) || 0).toLocaleString()}</div>
             </div>
           </div>
         </div>
@@ -108,7 +193,7 @@ export default function BeautyJourney() {
       {/* Week progress bar */}
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 6 }}>
-          <span>Week {plan.current_week}</span>
+          <span>Week 1</span>
           <span>{Math.round(progressPct)}% of journey</span>
         </div>
         <div style={{ height: 6, background: 'var(--border-subtle)', borderRadius: 3 }}>
@@ -179,10 +264,10 @@ export default function BeautyJourney() {
                           </div>
                         )}
                       </div>
-                      <div style={{ fontWeight: 600, fontSize: '0.95rem', marginBottom: 4 }}>{m.title}</div>
-                      <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: 8, lineHeight: 1.5 }}>{m.description}</p>
+                      <div style={{ fontWeight: 600, fontSize: '0.95rem', marginBottom: 4 }}>{m.milestone}</div>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: 8, lineHeight: 1.5 }}>{m.expected_outcome}</p>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <Calendar size={12} /> {m.service}
+                        <Calendar size={12} /> {m.salon_visit?.recommended_service}
                       </div>
                     </div>
                   </motion.div>
@@ -196,22 +281,21 @@ export default function BeautyJourney() {
         {activeTab === 'homecare' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'var(--space-lg)' }}>
-              {homecareSteps.map((routine, i) => (
-                <motion.div key={routine.time} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}
-                  className="card" style={{ padding: '24px' }}>
-                  <h4 style={{ marginBottom: 16, fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Clock size={16} style={{ color: '#f44f9a' }} /> {routine.time}
-                  </h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {routine.steps.map((step: any, j: number) => (
-                      <div key={j} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '0.85rem' }}>
-                        <Circle size={8} style={{ color: 'var(--border-medium)', flexShrink: 0 }} />
-                        {step}
-                      </div>
-                    ))}
-                  </div>
-                </motion.div>
-              ))}
+              <div className="card" style={{ padding: '24px' }}>
+                <h4 style={{ marginBottom: 16, fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Clock size={16} style={{ color: '#f44f9a' }} /> Journey Home Care Routine
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {allHomecare.length > 0 ? allHomecare.map((step: string, j: number) => (
+                    <div key={j} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '0.85rem' }}>
+                      <Circle size={8} style={{ color: 'var(--border-medium)', flexShrink: 0 }} />
+                      {step}
+                    </div>
+                  )) : (
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>No specific home care tips for this plan phase.</p>
+                  )}
+                </div>
+              </div>
             </div>
           </motion.div>
         )}
@@ -272,6 +356,11 @@ export default function BeautyJourney() {
                       <span style={{ color: '#f44f9a', fontWeight: 600 }}>Now: {p.current}{p.unit}</span>
                       <span>Target: {p.target}{p.unit}</span>
                     </div>
+                    {skinProjection?.improvements && i === 0 && (
+                      <div style={{ marginTop: 12, padding: 8, background: 'rgba(244,79,154,0.05)', borderRadius: 4, fontSize: '0.7rem' }}>
+                        <strong>AI Projection:</strong> {skinProjection.improvements.join(', ')}
+                      </div>
+                    )}
                   </motion.div>
                 );
               })}

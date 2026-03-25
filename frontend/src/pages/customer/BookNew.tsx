@@ -61,7 +61,7 @@ export default function BookNew() {
   });
 
   const filtered = SERVICES.filter((s: any) => {
-    if (selectedCat !== 'All' && s.category !== selectedCat) return false;
+    if (selectedCat !== 'All' && s.category.toLowerCase() !== selectedCat.toLowerCase()) return false;
     if (search && !(s.name ?? '').toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });

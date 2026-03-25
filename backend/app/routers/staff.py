@@ -11,6 +11,12 @@ from app.models.staff import StaffProfile
 from app.dependencies import get_current_user, require_roles
 from app.schemas.common import APIResponse
 
+# AI Agent Handlers
+from app.agents.track2_staff import ai_upsell_suggestions_handler, onboarding_progress_handler
+from app.agents.track5_experience import rapport_handover_handler
+from app.agents.track6_intelligence import unified_intelligence_handler
+
+
 router = APIRouter(prefix="/staff", tags=["Staff"])
 
 
@@ -207,3 +213,46 @@ async def staff_performance(
         "soulskin_certified": staff.soulskin_certified,
         "attrition_risk_label": enum_val(staff.attrition_risk_label) if staff.attrition_risk_label else None,
     })
+
+
+@router.post("/agents/upsell", response_model=APIResponse)
+async def get_staff_upsell_suggestions(
+    body: dict,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    """AI Agent: Generates upsell recommendations for a specific customer/booking."""
+    from app.agents.track2_staff import AIUpsellRequest
+    req = AIUpsellRequest(**body)
+    return await ai_upsell_suggestions_handler(req, db, user)
+
+
+@router.get("/agents/onboarding", response_model=APIResponse)
+async def get_staff_onboarding_status(
+    staff_id: str = Query(...),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    """AI Agent: Tracks onboarding progress, skill readiness, and mentor sessions."""
+    return await onboarding_progress_handler(staff_id, db, user)
+
+
+@router.get("/agents/track5/rapport/handover", response_model=APIResponse)
+async def rapport_handover_agent(
+    customer_id: str = Query(...),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_roles([UserRole.STYLIST, UserRole.SALON_MANAGER, UserRole.SUPER_ADMIN])),
+):
+    """Bridge to rapport_handover_handler."""
+    return await rapport_handover_handler(customer_id, db, user)
+
+
+@router.get("/agents/track6/unified/intelligence", response_model=APIResponse)
+async def unified_intelligence_agent(
+    staff_id: str = Query(...),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_roles([UserRole.SALON_MANAGER, UserRole.FRANCHISE_OWNER, UserRole.REGIONAL_MANAGER, UserRole.SUPER_ADMIN])),
+):
+    """Bridge to unified_intelligence_handler."""
+    return await unified_intelligence_handler(staff_id, db, user)
+

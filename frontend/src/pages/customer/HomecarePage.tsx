@@ -110,7 +110,7 @@ export default function HomecarePage() {
                 <span style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>{time}</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingLeft: 22 }}>
-                {steps.map((step: string, i: number) => (
+                {(Array.isArray(steps) ? steps : [steps]).map((step: string, i: number) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.85rem', lineHeight: 1.5 }}>
                     <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#f44f9a', marginTop: 6, flexShrink: 0 }} />
                     {step}
@@ -137,7 +137,7 @@ export default function HomecarePage() {
                 <span style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>{time}</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingLeft: 22 }}>
-                {steps.map((step: string, i: number) => (
+                {(Array.isArray(steps) ? steps : [steps]).map((step: string, i: number) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.85rem', lineHeight: 1.5 }}>
                     <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#9B7FD4', marginTop: 6, flexShrink: 0 }} />
                     {step}

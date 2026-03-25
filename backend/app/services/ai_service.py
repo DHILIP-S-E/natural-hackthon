@@ -70,7 +70,13 @@ Respond with ONLY valid JSON matching this exact structure:
   },
   "mirror_monologue": "...",
   "private_life_note": "...",
-  "look_created": "..."
+  "look_created": "...",
+  "diagnostics": {
+    "hair_type": "...",
+    "skin_type": "...",
+    "stress_level": "low|medium|high",
+    "diet_type": "..."
+  }
 }"""
 
 _HOMECARE_SYSTEM_PROMPT = """You are AURA's AI beauty advisor. Generate a personalized home care plan.
@@ -121,6 +127,9 @@ Respond with ONLY valid JSON:
     "week_12": "..."
   },
   "skin_projection": {"predicted_score": 80, "improvements": ["..."]},
+  "recommended_products": [
+    {"name": "...", "reason": "...", "price": 500, "image_url": "..."}
+  ],
   "estimated_total_cost": 15000,
   "ai_notes": "Personalized narrative about this journey..."
 }"""
@@ -303,8 +312,13 @@ def _fallback_soul_reading(colour: str, word: str, song: str = "") -> dict:
             "do_not_say": ["You look tired", "Are you stressed?", "What happened to your hair?"],
         },
         "mirror_monologue": f"Today, {arch['name']} energy guided this transformation. The beauty was always there — we just let it show.",
-        "private_life_note": f"Today I chose '{colour}' as my colour. I wanted to feel '{word}'. And I left feeling exactly that.",
         "look_created": f"A look designed for the {arch['name']} archetype — {arch['element']} energy made visible.",
+        "diagnostics": {
+            "hair_type": "Normal/Balanced",
+            "skin_type": "Normal/Combination",
+            "stress_level": "medium",
+            "diet_type": "Balanced"
+        }
     }
 
 
@@ -364,7 +378,12 @@ def _fallback_journey(goal: str = "", duration_weeks: int = 12, hair_damage: int
             f"week_{duration_weeks}": f"Target achieved: {goal or 'Overall hair health improvement'}",
         },
         "skin_projection": {"predicted_score": min(85, 60 + duration_weeks), "improvements": ["Hydration", "Texture", "Radiance"]},
-        "estimated_total_cost": len(milestones) * 1500,
+        "recommended_products": [
+            {"name": "Professional Sulfate-free Shampoo", "reason": "Preserves moisture during recovery", "price": 850, "image_url": "https://images.unsplash.com/photo-1535585209827-a15fcdbc4c2d?w=200"},
+            {"name": "Deep Repair Hair Mask", "reason": "Weekly intensive reconstruction", "price": 1200, "image_url": "https://images.unsplash.com/photo-1526947425960-945c6e72858f?w=200"},
+            {"name": "Heat Protectant Spray", "reason": "Essential for daily styling protection", "price": 650, "image_url": "https://images.unsplash.com/photo-1620916566398-39f114327e30?w=200"},
+        ],
+        "estimated_total_cost": len(milestones) * 1500 + 2700,
         "ai_notes": f"This {duration_weeks}-week journey is designed to achieve: {goal or 'comprehensive beauty improvement'}. Consistency is key — each salon visit builds on the previous one.",
     }
 

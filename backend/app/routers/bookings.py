@@ -12,6 +12,17 @@ from app.dependencies import get_current_user, require_role, check_booking_owner
 from app.schemas.common import APIResponse
 from app.utils.helpers import generate_booking_number
 
+# Track 3 & 5 AI Agent Handlers
+from app.agents.track3_personalization import (
+    generate_homecare_plan_handler,
+    allergy_safety_check_handler,
+)
+from app.agents.track5_experience import (
+    smart_followup_generate_handler,
+    SmartFollowupRequest,
+)
+
+
 router = APIRouter(prefix="/bookings", tags=["Bookings"])
 
 
@@ -232,13 +243,38 @@ async def create_booking(
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new booking."""
+    # Resolve customer_id
+    customer_id = data.get("customer_id")
+    if not customer_id:
+        from app.models.customer import CustomerProfile
+        if enum_val(current_user.role) == UserRole.CUSTOMER.value:
+            cp_result = await db.execute(
+                select(CustomerProfile).where(CustomerProfile.user_id == current_user.id)
+            )
+            cp = cp_result.scalar_one_or_none()
+            if cp:
+                customer_id = cp.id
+            else:
+                raise HTTPException(status_code=400, detail="Customer profile not found for user")
+        else:
+            raise HTTPException(status_code=400, detail="customer_id is required for staff-led bookings")
+
+    # Robust datetime parsing
+    scheduled_at = data["scheduled_at"]
+    if isinstance(scheduled_at, str):
+        try:
+            # Handle possible 'T' or space separator
+            scheduled_at = datetime.fromisoformat(scheduled_at.replace("Z", "+00:00"))
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid date format: {scheduled_at}")
+
     booking = Booking(
         booking_number=generate_booking_number(),
-        customer_id=data["customer_id"],
+        customer_id=customer_id,
         location_id=data["location_id"],
         service_id=data["service_id"],
         stylist_id=data.get("stylist_id"),
-        scheduled_at=data["scheduled_at"],
+        scheduled_at=scheduled_at,
         base_price=data.get("base_price"),
         final_price=data.get("final_price", data.get("base_price")),
         source=data.get("source", "app"),
@@ -246,8 +282,13 @@ async def create_booking(
         notes=data.get("notes"),
     )
     db.add(booking)
-    await db.flush()
-    return APIResponse(success=True, data={"id": booking.id, "booking_number": booking.booking_number}, message="Booking created")
+    await db.commit() # Use commit for persistence
+    await db.refresh(booking)
+    return APIResponse(
+        success=True, 
+        data={"id": booking.id, "booking_number": booking.booking_number}, 
+        message="Booking created successfully"
+    )
 
 
 # ── Single booking + lifecycle (staff-only for state changes) ──
@@ -369,3 +410,40 @@ async def no_show_booking(
         raise HTTPException(status_code=404, detail="Booking not found")
     booking.status = BookingStatus.NO_SHOW
     return APIResponse(success=True, message="Marked as no-show")
+
+
+# ── AI Agent Managed Endpoints (Track 3 & 5) ──
+
+@router.post("/agents/track3/homecare/generate", response_model=APIResponse)
+async def generate_homecare_plan_agent(
+    customer_id: str = Query(...),
+    booking_id: str = Query(...),
+    service_id: str = Query(...),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_role(["stylist", "salon_manager", "super_admin"])),
+):
+    """Bridge to generate_homecare_plan_handler."""
+    return await generate_homecare_plan_handler(customer_id, booking_id, service_id, db, user)
+
+
+@router.post("/agents/track3/safety/allergy-check", response_model=APIResponse)
+async def allergy_safety_check_agent(
+    customer_id: str = Query(...),
+    service_id: str = Query(...),
+    products: list[str] = Query(default=[], description="List of product names to check"),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_role(["stylist", "salon_manager", "super_admin"])),
+):
+    """Bridge to allergy_safety_check_handler."""
+    return await allergy_safety_check_handler(customer_id, service_id, products, db, user)
+
+
+@router.post("/agents/track5/followup/generate", response_model=APIResponse)
+async def smart_followup_generate_agent(
+    body: SmartFollowupRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_role(["stylist", "salon_manager"])),
+):
+    """Bridge to smart_followup_generate_handler."""
+    return await smart_followup_generate_handler(body, db, user)
+

@@ -247,7 +247,7 @@ export default function SoulskinFlow() {
             {/* Service Protocol */}
             <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
               className="card" style={{ marginBottom: 16 }}>
-              <h4 style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>\u2702\uFE0F Recommended Treatment</h4>
+              <h4 style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>✂️ Recommended Treatment</h4>
               <div style={{ background: 'var(--bg-surface)', borderRadius: 'var(--radius-md)', padding: 14 }}>
                 <div style={{ fontWeight: 600, marginBottom: 4 }}>{activeReading.protocol.primary}</div>
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{activeReading.protocol.why}</div>
@@ -257,7 +257,7 @@ export default function SoulskinFlow() {
             {/* Sensory Environment */}
             <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}
               className="card" style={{ marginBottom: 16 }}>
-              <h4 style={{ marginBottom: 12 }}>\uD83C\uDF3F Your Sensory Environment</h4>
+              <h4 style={{ marginBottom: 12 }}>🌿 Your Sensory Environment</h4>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
                 {[
                   { label: 'Aroma', value: activeReading.sensory.aroma, icon: '\uD83C\uDF3F' },
@@ -276,7 +276,7 @@ export default function SoulskinFlow() {
             {/* Mirror Monologue */}
             <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9 }}
               className="card" style={{ background: `${ARCHETYPES[archetype].color}05`, borderColor: `${ARCHETYPES[archetype].color}25`, textAlign: 'center' }}>
-              <h4 style={{ marginBottom: 12, color: ARCHETYPES[archetype].color }}>\uD83E\uDE9E Mirror Monologue</h4>
+              <h4 style={{ marginBottom: 12, color: ARCHETYPES[archetype].color }}>🪞 Mirror Monologue</h4>
               <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontStyle: 'italic', color: 'var(--text-secondary)', lineHeight: 1.8 }}>
                 "{activeReading.monologue}"
               </p>

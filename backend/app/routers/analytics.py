@@ -16,8 +16,18 @@ from app.models.staff import StaffProfile
 from app.models.training import TrainingRecord
 from app.models.service import Service
 from app.models.location import Location
-from app.dependencies import get_current_user, require_any_staff
+from app.dependencies import get_current_user, require_any_staff, require_roles
 from app.schemas.common import APIResponse
+
+# Track 6 AI Agent Handlers
+from app.agents.track6_intelligence import (
+    franchise_bi_dashboard_handler,
+    training_roi_handler as ai_training_roi_handler,
+    franchise_live_compare_handler,
+    customer_ltv_model_handler,
+    skill_gap_forecast_handler as ai_skill_gap_forecast_handler,
+)
+
 
 router = APIRouter(prefix="/analytics", tags=["Analytics & BI"])
 
@@ -501,3 +511,54 @@ async def export_report(
         return await staff_analytics(location_id=location_id, current_user=current_user, db=db)
     else:
         return await analytics_overview(location_id=location_id, current_user=current_user, db=db)
+
+
+# ── AI Agent Managed Endpoints (Track 6: Intelligence) ──
+
+@router.get("/agents/track6/franchise/bi", response_model=APIResponse)
+async def franchise_bi_agent(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_roles([UserRole.FRANCHISE_OWNER, UserRole.REGIONAL_MANAGER, UserRole.SUPER_ADMIN])),
+):
+    """Bridge to franchise_bi_dashboard_handler."""
+    return await franchise_bi_dashboard_handler(db, user)
+
+
+@router.get("/agents/track6/training/roi", response_model=APIResponse)
+async def ai_training_roi_agent(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_roles([UserRole.FRANCHISE_OWNER, UserRole.REGIONAL_MANAGER, UserRole.SUPER_ADMIN])),
+):
+    """Bridge to training_roi_handler (AI version)."""
+    return await ai_training_roi_handler(db, user)
+
+
+@router.get("/agents/track6/franchise/compare", response_model=APIResponse)
+async def franchise_compare_agent(
+    city: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_roles([UserRole.FRANCHISE_OWNER, UserRole.REGIONAL_MANAGER, UserRole.SUPER_ADMIN])),
+):
+    """Bridge to franchise_live_compare_handler."""
+    return await franchise_live_compare_handler(city, db, user)
+
+
+@router.get("/agents/track6/customer/ltv", response_model=APIResponse)
+async def customer_ltv_agent(
+    customer_id: str = Query(...),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_roles([UserRole.SALON_MANAGER, UserRole.FRANCHISE_OWNER, UserRole.SUPER_ADMIN])),
+):
+    """Bridge to customer_ltv_model_handler."""
+    return await customer_ltv_model_handler(customer_id, db, user)
+
+
+@router.get("/agents/track6/skills/forecast", response_model=APIResponse)
+async def skill_gap_forecast_agent(
+    location_id: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_roles([UserRole.SALON_MANAGER, UserRole.REGIONAL_MANAGER, UserRole.SUPER_ADMIN])),
+):
+    """Bridge to skill_gap_forecast_handler."""
+    return await ai_skill_gap_forecast_handler(location_id, db, user)
+

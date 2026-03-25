@@ -18,6 +18,7 @@ class BeautyJourneyPlan(Base, TimestampMixin):
     milestones: Mapped[dict | None] = mapped_column(JSON)
     expected_outcomes: Mapped[dict | None] = mapped_column(JSON)
     skin_projection: Mapped[dict | None] = mapped_column(JSON)
+    recommended_products: Mapped[list | None] = mapped_column(JSON)
     estimated_total_cost: Mapped[float | None] = mapped_column(Numeric(10, 2))
 
     ai_notes: Mapped[str | None] = mapped_column(Text)

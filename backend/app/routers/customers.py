@@ -10,10 +10,28 @@ from app.database import get_db, enum_val
 from app.models.user import User, UserRole
 from app.models.customer import CustomerProfile
 from app.models.booking import Booking, BookingStatus
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user, require_role
 from app.schemas.common import APIResponse
 
+# Track 3 AI Agent Handlers
+from app.agents.track3_personalization import (
+    beauty_passport_full_handler,
+    ai_hair_skin_diagnosis_handler,
+    next_best_service_handler,
+)
+
+
 router = APIRouter(prefix="/customers", tags=["Customers / Beauty Passport"])
+
+
+async def _resolve_customer_id(customer_id: str, db: AsyncSession, user: User) -> str | None:
+    """Helper to resolve 'me' or raw ID to a CustomerProfile.id (UUID string)."""
+    if customer_id == "me":
+        result = await db.execute(
+            select(CustomerProfile.id).where(CustomerProfile.user_id == user.id)
+        )
+        return str(result.scalar_one_or_none())
+    return customer_id
 
 
 @router.get("", response_model=APIResponse)
@@ -107,10 +125,14 @@ async def get_customer(
     db: AsyncSession = Depends(get_db),
 ):
     """Get full Beauty Passport for a customer."""
+    target_id = await _resolve_customer_id(customer_id, db, current_user)
+    if not target_id:
+        raise HTTPException(status_code=404, detail="Customer not found")
+
     result = await db.execute(
         select(CustomerProfile)
         .options(selectinload(CustomerProfile.user))
-        .where(CustomerProfile.id == customer_id)
+        .where(CustomerProfile.id == target_id)
     )
     c = result.scalar_one_or_none()
     if not c:
@@ -168,8 +190,12 @@ async def update_customer(
     db: AsyncSession = Depends(get_db),
 ):
     """Update customer profile (Beauty Passport fields)."""
+    target_id = await _resolve_customer_id(customer_id, db, current_user)
+    if not target_id:
+        raise HTTPException(status_code=404, detail="Customer not found")
+
     result = await db.execute(
-        select(CustomerProfile).where(CustomerProfile.id == customer_id)
+        select(CustomerProfile).where(CustomerProfile.id == target_id)
     )
     customer = result.scalar_one_or_none()
     if not customer:
@@ -198,6 +224,10 @@ async def customer_history(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """Get visit and soul journaling history."""
+    target_id = await _resolve_customer_id(customer_id, db, current_user)
+    if not target_id:
+        raise HTTPException(status_code=404, detail="Customer not found")
     """Get customer's service history timeline."""
     from app.models.service import Service
 
@@ -373,3 +403,37 @@ async def delete_customer(
         user.is_active = False
 
     return APIResponse(success=True, message="Customer data marked for deletion (30-day retention per DPDP Act)")
+
+
+# ── AI Agent Managed Endpoints (Track 3: Personalization) ──
+
+@router.get("/agents/track3/passport/full", response_model=APIResponse)
+async def beauty_passport_full_agent(
+    customer_id: str = Query(..., description="Customer profile ID"),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_role(["stylist", "salon_manager", "customer", "super_admin"])),
+):
+    """Bridge to beauty_passport_full_handler agent."""
+    return await beauty_passport_full_handler(customer_id, db, user)
+
+
+@router.post("/agents/track3/diagnosis/hair-skin", response_model=APIResponse)
+async def ai_hair_skin_diagnosis_agent(
+    customer_id: str = Query(..., description="Customer profile ID"),
+    image_analysis: Optional[dict] = None,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_role(["stylist", "salon_manager", "customer", "super_admin"])),
+):
+    """Bridge to ai_hair_skin_diagnosis_handler agent."""
+    return await ai_hair_skin_diagnosis_handler(customer_id, image_analysis, db, user)
+
+
+@router.get("/agents/track3/recommendations/next-best", response_model=APIResponse)
+async def next_best_service_agent(
+    customer_id: str = Query(...),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_role(["stylist", "salon_manager", "customer", "super_admin"])),
+):
+    """Bridge to next_best_service_handler agent."""
+    return await next_best_service_handler(customer_id, db, user)
+

@@ -67,6 +67,7 @@ async def update_soulskin_session(
         if field in data:
             setattr(session, field, data[field])
 
+    await db.commit()
     return APIResponse(success=True, message="Answers recorded")
 
 
@@ -134,7 +135,19 @@ async def generate_soul_reading(
             history = cp2.archetype_history or []
             history.append({"archetype": archetype, "date": str(date.today()), "session_id": session.id})
             cp2.archetype_history = history
+            
+            # Sync diagnostics if available
+            diagnostics = ai_result.get("diagnostics", {})
+            if diagnostics:
+                if "hair_type" in diagnostics: cp2.hair_type = diagnostics["hair_type"]
+                if "skin_type" in diagnostics: cp2.skin_type = diagnostics["skin_type"]
+                if "stress_level" in diagnostics: cp2.stress_level = diagnostics["stress_level"]
+                if "diet_type" in diagnostics: cp2.diet_type = diagnostics["diet_type"]
+                # Also estimate beauty score if missing
+                if not cp2.beauty_score:
+                    cp2.beauty_score = 75 # Initial baseline
 
+    await db.commit()
     return APIResponse(
         success=True,
         data={

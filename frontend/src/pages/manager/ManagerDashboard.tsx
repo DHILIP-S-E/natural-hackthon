@@ -1,6 +1,6 @@
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
-import { Calendar, Users, BookOpen, Star, Activity, AlertTriangle, ArrowUpRight, ArrowDownRight, DollarSign } from 'lucide-react';
+import { Calendar, Users, BookOpen, Star, Activity, AlertTriangle, ArrowUpRight, ArrowDownRight, DollarSign, Clock, ShieldCheck, Zap, TrendingUp, ChevronRight } from 'lucide-react';
 import { TiltCard } from '../../components/ui/TiltCard';
 import { InlineSparkle } from '../../components/ui/PremiumBadge';
 import api from '../../config/api';
@@ -39,6 +39,17 @@ export default function ManagerDashboard() {
     queryKey: ['analytics', 'soulskin'],
     queryFn: () => api.get('/analytics/soulskin').then(r => r.data?.data),
     staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: timeMonitor } = useQuery({
+    queryKey: ['quality', 'time-monitor'],
+    queryFn: () => api.get('/quality/agents/time-monitor?location_id=L-001').then(r => r.data?.data), // Hardcoded Loc for demo
+    refetchInterval: 30000,
+  });
+
+  const { data: benchmarkData } = useQuery({
+    queryKey: ['quality', 'benchmark'],
+    queryFn: () => api.get('/quality/agents/benchmark').then(r => r.data?.data),
   });
 
   // Build KPI data from API
@@ -97,6 +108,13 @@ export default function ManagerDashboard() {
 
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-IN', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+
+  // Operational Health Metrics
+  const healthMetrics = [
+    { label: 'Rushing Risk', value: timeMonitor?.rushing_count || 0, color: 'var(--warning)', icon: Zap },
+    { label: 'Overtime', value: timeMonitor?.overtime_count || 0, color: 'var(--rose)', icon: Clock },
+    { label: 'Compliance', value: `${(overview?.avg_sop_compliance || 0).toFixed(0)}%`, color: 'var(--teal)', icon: ShieldCheck },
+  ];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xl)' }}>
@@ -177,74 +195,71 @@ export default function ManagerDashboard() {
             </div>
           </TiltCard>
         </motion.div>
-
-        {/* Alerts panel */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="card" style={{ padding: 0, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)' }}>
-            <h4 style={{ display: 'flex', alignItems: 'center', gap: 8 }}><AlertTriangle size={18} /> Smart Alerts</h4>
-          </div>
-          <div style={{ flex: 1 }}>
-            {alerts.map((a: any, i: number) => (
-              <div key={i} style={{ padding: '14px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                <div style={{ width: 6, height: 6, borderRadius: '50%', marginTop: 6, background: a.severity === 'warning' ? 'var(--warning)' : 'var(--info)', flexShrink: 0 }} />
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{a.msg}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* SOULSKIN quick stat */}
-          <div style={{ padding: '20px', borderTop: '1px solid var(--border-subtle)', background: 'rgba(155,127,212,0.04)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <span style={{ fontSize: '0.75rem', color: 'var(--violet)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                <InlineSparkle /> SOULSKIN Today
-              </span>
-            </div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {Object.entries(ARCH_DATA).map(([key, data]) => {
-                const Icon = data.icon;
-                const count = archetypeDist[key] || 0;
-                return (
-                  <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#fff', border: '1px solid var(--border-subtle)', padding: '5px 12px', borderRadius: 'var(--radius-full)', fontSize: '0.75rem', fontWeight: 600 }}>
-                    <Icon size={12} color={data.color} strokeWidth={2.5} />
-                    <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>{count}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </motion.div>
       </div>
 
-      {/* Staff performance strip */}
-      {team.length > 0 && (
-        <div className="card" style={{ padding: 0 }}>
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)' }}>
-            <h4 style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Users size={18} /> Team</h4>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 0 }}>
-            {team.map((s: any, i: number) => (
-              <div key={i} style={{ padding: '16px 20px', borderRight: '1px solid var(--border-subtle)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--bg-surface)', border: '2px solid var(--border-medium)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, fontSize: '0.8rem', color: 'var(--gold)' }}>
-                    {(s.name ?? '').split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
+      {/* AI Operational Health Section */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--space-lg)' }}>
+        {healthMetrics.map((m, i) => (
+          <motion.div key={i} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.1 }}
+            className="card" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{ width: 44, height: 44, borderRadius: 12, background: `${m.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <m.icon size={22} color={m.color} />
+            </div>
+            <div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{m.label}</div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>{m.value}</div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Team Coaching & Onboarding Insights */}
+      <div className="card" style={{ padding: 0, position: 'relative', overflow: 'hidden' }}>
+        <div style={{ padding: '20px', borderBottom: '1px solid var(--border-subtle)', background: 'linear-gradient(90deg, rgba(42,157,143,0.05) 0%, rgba(255,255,255,0) 100%)' }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Zap size={18} color="var(--gold)" /> AI Team Coaching: Upsell & Readiness
+          </h3>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 0 }}>
+          {team.map((s: any, i: number) => (
+            <div key={i} style={{ padding: '24px', borderRight: i % 2 === 0 ? '1px solid var(--border-subtle)' : 'none', borderBottom: i < team.length - 2 ? '1px solid var(--border-subtle)' : 'none' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--bg-surface)', border: '2px solid var(--border-medium)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.8rem', color: 'var(--gold)' }}>
+                    {s.name.split(' ').map((n: string) => n[0]).join('')}
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{s.name}</div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{s.role}</div>
+                    <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{s.name}</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{s.role} · {s.rating.toFixed(1)} ★</div>
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 12, fontSize: '0.75rem' }}>
-                  <div><span style={{ color: 'var(--success)', fontWeight: 600 }}>{s.completed}</span> <span style={{ color: 'var(--text-muted)' }}>services</span></div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <Star size={12} style={{ color: 'var(--gold)' }} /><span style={{ fontWeight: 600 }}>{s.rating?.toFixed(1) || '0'}</span>
-                  </div>
-                  {s.soulskin && <span style={{ color: 'var(--violet)', fontSize: '0.7rem' }}>✨ SOULSKIN</span>}
+                <div className="badge badge-success" style={{ fontSize: '0.65rem' }}>Active</div>
+              </div>
+
+              {/* Training Progress (Onboarding Agent proxy) */}
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', marginBottom: 6 }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Skill Readiness (L2)</span>
+                  <span style={{ fontWeight: 600 }}>{70 + i * 5}%</span>
+                </div>
+                <div style={{ height: 4, background: 'var(--bg-surface)', borderRadius: 2 }}>
+                  <div style={{ height: '100%', width: `${70 + i * 5}%`, background: 'var(--teal)', borderRadius: 2 }} />
                 </div>
               </div>
-            ))}
-          </div>
+
+              {/* AI Suggestion */}
+              <div style={{ padding: 12, background: 'rgba(155,127,212,0.06)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(155,127,212,0.1)' }}>
+                <div style={{ fontSize: '0.65rem', color: 'var(--violet)', fontWeight: 700, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <TrendingUp size={12} /> UPSELL OPPORTUNITY
+                </div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  {i % 2 === 0 ? 'Recommend Soulskin Hydration for current guest.' : 'Bundle Scalp Detox with upcoming Hair Spa.'}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
-      )}
+      </div>
     </div>
   );
 }

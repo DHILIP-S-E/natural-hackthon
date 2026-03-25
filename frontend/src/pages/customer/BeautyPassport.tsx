@@ -4,13 +4,12 @@ import { motion } from 'framer-motion';
 import {
   Eye, Sparkles, Droplets, Sun, Wind, Shield,
   Scissors, BookOpen, Clock, Activity, AlertTriangle,
-  Star, Coffee, Smile
+  Coffee, Smile
 } from 'lucide-react';
 import api from '../../config/api';
 import BeautyScoreRing from '../../components/BeautyScoreRing';
 import ArchetypeBadge from '../../components/ArchetypeBadge';
 import { ARCH_DATA } from '../../constants/archetypes';
-import type { CustomerProfile } from '../../types';
 
 type TabKey = 'overview' | 'hair' | 'skin' | 'lifestyle' | 'safety' | 'soul' | 'history';
 
@@ -37,25 +36,39 @@ export default function BeautyPassport() {
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
 
   const customerId = 'me'; // current logged-in customer
-  const { data: customer, isLoading } = useQuery({
-    queryKey: ['customer-profile', customerId],
+
+  // Fetch unified beauty passport agent data
+  const { data: passport, isLoading: passportLoading } = useQuery({
+    queryKey: ['beauty-passport-full', customerId],
     queryFn: async () => {
-      const res = await api.get(`/customers/${customerId}`);
-      return res.data.data as CustomerProfile;
+      const res = await api.get(`/agents/track3/passport/full?customer_id=${customerId}`);
+      return res.data.data;
     },
     retry: false,
   });
 
-  const { data: visitHistory = [] } = useQuery({
-    queryKey: ['customer-history', customerId],
+  // Fetch AI health diagnosis agent data
+  const { data: diagnosis, isLoading: diagnosisLoading } = useQuery({
+    queryKey: ['beauty-diagnosis', customerId],
     queryFn: async () => {
-      const res = await api.get(`/customers/${customerId}/history`);
-      return res.data.data ?? [];
+      const res = await api.get(`/agents/track3/diagnosis/hair-skin?customer_id=${customerId}`);
+      return res.data.data;
     },
     retry: false,
   });
 
-  const c = (customer as any) ?? {};
+  const p = passport ?? {};
+  const d = diagnosis ?? {};
+  
+  const isLoading = passportLoading || (diagnosisLoading && !diagnosis);
+
+  // Fallback for safety during transition
+  const c = p.hair_profile ? {
+    ...p.hair_profile,
+    ...p.skin_profile,
+    ...p,
+    name: p.profile?.name || 'My Passport', // handle profile nesting if present
+  } : {};
 
   if (isLoading && !c) {
     return (
@@ -73,25 +86,30 @@ export default function BeautyPassport() {
       {/* Page Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
-          <BeautyScoreRing score={c.beauty_score ?? 78} size={110} />
+          <BeautyScoreRing score={p.beauty_score ?? 0} size={110} />
           <div>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginBottom: 4, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Beauty Passport</p>
-            <h1 style={{ fontSize: '2rem', fontWeight: 700, letterSpacing: '-0.01em' }}>{c.name ?? 'My Passport'}</h1>
+            <h1 style={{ fontSize: '2rem', fontWeight: 700, letterSpacing: '-0.01em' }}>{p.name || 'My Passport'}</h1>
             <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-              {c.dominant_archetype && (
-                <ArchetypeBadge archetype={c.dominant_archetype} size="md" />
+              {p.soulskin?.dominant_archetype && (
+                <ArchetypeBadge archetype={p.soulskin.dominant_archetype} size="md" />
               )}
-              <span className="badge badge-teal" style={{ padding: '5px 12px', fontWeight: 600 }}>{c.total_visits ?? 0} visits</span>
+              <span className="badge badge-teal" style={{ padding: '5px 12px', fontWeight: 600 }}>{p.total_visits ?? 0} visits</span>
               <span className="badge" style={{ padding: '5px 12px', fontWeight: 600, background: 'rgba(155,127,212,0.1)', color: '#9B7FD4' }}>
-                {c.passport_completeness ?? 0}% complete
+                {p.passport_completeness ?? 0}% complete
               </span>
+              {d.treatment_urgency && d.treatment_urgency !== 'low' && (
+                <span className="badge badge-rose" style={{ padding: '5px 12px', fontWeight: 700 }}>
+                   <Activity size={12} style={{ marginRight: 4 }} /> AI: {d.treatment_urgency.toUpperCase()} URGENCY
+                </span>
+              )}
             </div>
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Lifetime Value</div>
           <div style={{ fontSize: '1.25rem', fontWeight: 700, fontFamily: 'var(--font-display)' }}>
-            {'\u20B9'}{(Number(c.lifetime_value) || 0).toLocaleString()}
+            {'\u20B9'}{(Number(p.lifetime_value) || 0).toLocaleString() ?? '0'}
           </div>
         </div>
       </div>
@@ -112,6 +130,34 @@ export default function BeautyPassport() {
         ))}
       </div>
 
+      {/* AI Health Summary (Shared above tabs for relevance) */}
+      {d.combined_score && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} 
+          style={{ background: 'var(--bg-card)', padding: '20px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-subtle)', display: 'flex', gap: 24, alignItems: 'center', marginTop: '1rem' }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '1.75rem', fontWeight: 800, color: d.combined_score > 70 ? 'var(--success)' : d.combined_score > 40 ? 'var(--warning)' : 'var(--error)' }}>{d.combined_score}</div>
+            <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Health Index</div>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 8, fontWeight: 600, textTransform: 'uppercase' }}>AI Health Observations</div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {(d.key_concerns || []).map((concern: string, i: number) => (
+                <span key={i} style={{ fontSize: '0.7rem', padding: '4px 10px', background: 'rgba(0,0,0,0.03)', borderRadius: 'var(--radius-full)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>
+                  {concern}
+                </span>
+              ))}
+            </div>
+          </div>
+          {p.preferred_stylist && (
+            <div style={{ textAlign: 'right', borderLeft: '1px solid var(--border-subtle)', paddingLeft: 24 }}>
+              <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: 4 }}>PREFERRED STYLIST</div>
+              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--violet)' }}>{p.preferred_stylist.name}</div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{p.preferred_stylist.skill_level}</div>
+            </div>
+          )}
+        </motion.div>
+      )}
+
       {/* Tab Content */}
       <div style={{ minHeight: 400 }}>
         {/* OVERVIEW TAB */}
@@ -120,27 +166,33 @@ export default function BeautyPassport() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'var(--space-lg)' }}>
               {/* Quick Hair Summary */}
               <div className="card" style={{ padding: '24px', borderLeft: '4px solid #f44f9a' }}>
-                <h4 style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, fontSize: '0.95rem', fontWeight: 700 }}>
-                  <Scissors size={16} style={{ color: '#f44f9a' }} /> Hair Summary
-                </h4>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+                  <h4 style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '0.95rem', fontWeight: 700 }}>
+                    <Scissors size={16} style={{ color: '#f44f9a' }} /> Hair Summary
+                  </h4>
+                  {d.hair_score && <span style={{ fontSize: '0.75rem', fontWeight: 700, color: d.hair_score > 70 ? 'var(--success)' : 'var(--warning)' }}>{d.hair_score}% Health</span>}
+                </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  <DiagnosticRow label="Type" value={c.hair_type ?? 'N/A'} />
-                  <DiagnosticRow label="Texture" value={c.hair_texture ?? 'N/A'} />
-                  <DiagnosticRow label="Color" value={c.current_hair_color ?? 'N/A'} />
-                  <DiagnosticRow label="Damage" value={`${c.hair_damage_level ?? 0}/5`} />
+                  <DiagnosticRow label="Type" value={p.hair_profile?.type ?? 'N/A'} />
+                  <DiagnosticRow label="Texture" value={p.hair_profile?.texture ?? 'N/A'} />
+                  <DiagnosticRow label="Color" value={p.hair_profile?.current_color ?? 'N/A'} />
+                  <DiagnosticRow label="Damage" value={`${p.hair_profile?.damage_level ?? 0}/10`} />
                 </div>
               </div>
 
               {/* Quick Skin Summary */}
               <div className="card" style={{ padding: '24px', borderLeft: '4px solid #9B7FD4' }}>
-                <h4 style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, fontSize: '0.95rem', fontWeight: 700 }}>
-                  <Droplets size={16} style={{ color: '#9B7FD4' }} /> Skin Summary
-                </h4>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+                  <h4 style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '0.95rem', fontWeight: 700 }}>
+                    <Droplets size={16} style={{ color: '#9B7FD4' }} /> Skin Summary
+                  </h4>
+                  {d.skin_score && <span style={{ fontSize: '0.75rem', fontWeight: 700, color: d.skin_score > 70 ? 'var(--success)' : 'var(--warning)' }}>{d.skin_score}% Health</span>}
+                </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  <DiagnosticRow label="Type" value={c.skin_type ?? 'N/A'} />
-                  <DiagnosticRow label="Tone" value={c.skin_tone ?? 'N/A'} />
-                  <DiagnosticRow label="Undertone" value={c.undertone ?? 'N/A'} />
-                  <DiagnosticRow label="Concerns" value={c.primary_skin_concerns?.join(', ') ?? 'None'} />
+                  <DiagnosticRow label="Type" value={p.skin_profile?.type ?? 'N/A'} />
+                  <DiagnosticRow label="Tone" value={p.skin_profile?.tone ?? 'N/A'} />
+                  <DiagnosticRow label="Hydration" value={p.skin_profile?.hydration ?? 'N/A'} />
+                  <DiagnosticRow label="Concerns" value={p.skin_profile?.concerns?.join(', ') ?? 'None'} />
                 </div>
               </div>
 
@@ -152,17 +204,17 @@ export default function BeautyPassport() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
                   <div style={{ textAlign: 'center' }}>
                     <Sun size={20} style={{ color: '#E8A87C', marginBottom: 4 }} />
-                    <div style={{ fontSize: '1.1rem', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{c.local_uv_index ?? '-'}</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{p.lifestyle?.uv_index ?? 0}</div>
                     <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>UV Index</div>
                   </div>
                   <div style={{ textAlign: 'center' }}>
                     <Droplets size={20} style={{ color: '#4A9FD4', marginBottom: 4 }} />
-                    <div style={{ fontSize: '1.1rem', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{c.local_humidity ?? '-'}%</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{p.lifestyle?.humidity_pct ?? 0}%</div>
                     <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Humidity</div>
                   </div>
                   <div style={{ textAlign: 'center' }}>
                     <Wind size={20} style={{ color: '#6B8FA6', marginBottom: 4 }} />
-                    <div style={{ fontSize: '1.1rem', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{c.local_aqi ?? '-'}</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{p.lifestyle?.aqi ?? 0}</div>
                     <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>AQI</div>
                   </div>
                 </div>
@@ -176,19 +228,19 @@ export default function BeautyPassport() {
                 <div style={{ marginBottom: 16 }}>
                   <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: 6 }}>Known Allergies</div>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {(c.known_allergies ?? []).length > 0
-                      ? c.known_allergies.map((a: string) => <span key={a} className="badge badge-rose" style={{ fontWeight: 600 }}>{a}</span>)
+                    {(p.known_allergies ?? []).length > 0
+                      ? p.known_allergies.map((a: string) => <span key={a} className="badge badge-rose" style={{ fontWeight: 600 }}>{a}</span>)
                       : <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>None recorded</span>}
                   </div>
                 </div>
                 <div>
                   <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: 6 }}>Active Goal</div>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{c.primary_goal ?? 'No goal set'}</div>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{p.beauty_goals?.primary_goal ?? 'No goal set'}</div>
                   <div style={{ marginTop: 10, height: 6, background: 'rgba(0,0,0,0.04)', borderRadius: 3 }}>
-                    <motion.div initial={{ width: 0 }} animate={{ width: `${c.goal_progress_pct ?? 0}%` }} transition={{ duration: 0.8 }}
+                    <motion.div initial={{ width: 0 }} animate={{ width: `${p.beauty_goals?.progress_pct ?? 0}%` }} transition={{ duration: 0.8 }}
                       style={{ height: '100%', background: '#f44f9a', borderRadius: 3 }} />
                   </div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 4 }}>{c.goal_progress_pct ?? 0}% complete</div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 4 }}>{p.beauty_goals?.progress_pct ?? 0}% complete</div>
                 </div>
               </div>
             </div>
@@ -408,13 +460,44 @@ export default function BeautyPassport() {
               })}
             </div>
 
-            {/* Archetype history */}
-            {(c.archetype_history ?? []).length > 0 && (
-              <div style={{ maxWidth: 500, margin: '0 auto' }}>
-                <h4 style={{ fontSize: '0.85rem', color: '#9B99B0', marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Archetype Timeline</h4>
+            {/* Soul Journal entries */}
+            {(p.soulskin?.history ?? []).length > 0 && (
+              <div style={{ maxWidth: 600, margin: '32px auto 0', textAlign: 'left' }}>
+                <h4 style={{ fontSize: '0.85rem', color: '#9B99B0', marginBottom: 20, textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'center' }}>Detailed Soul Readings</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {(p.soulskin?.history ?? []).map((entry: any) => {
+                    const arch = ARCH_DATA[entry.archetype as keyof typeof ARCH_DATA] || ARCH_DATA.bloom;
+                    const Icon = arch.icon;
+                    return (
+                      <div key={entry.session_id} className="card" style={{ background: 'rgba(255,255,255,0.03)', borderColor: `${arch.color}30`, padding: '20px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div style={{ padding: 6, borderRadius: 6, background: `${arch.color}15` }}>
+                              <Icon size={16} color={arch.color} />
+                            </div>
+                            <span style={{ fontWeight: 700, color: arch.color }}>{arch.label}</span>
+                          </div>
+                          <span style={{ fontSize: '0.7rem', color: '#5C5A70' }}>{new Date(entry.date).toLocaleDateString()}</span>
+                        </div>
+                        <p style={{ fontSize: '0.9rem', color: '#F0EEF8', fontStyle: 'italic', lineHeight: 1.6 }}>"{entry.soul_reading || 'A deep resonance of beauty.'}"</p>
+                        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                          <span style={{ fontSize: '0.65rem', color: '#9B99B0', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: 4 }}>Color: {entry.colour}</span>
+                          <span style={{ fontSize: '0.65rem', color: '#9B99B0', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: 4 }}>Vibe: {entry.word}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Archetype history timeline (from profile) */}
+            {(p.soulskin?.archetype_history ?? []).length > 0 && (
+              <div style={{ maxWidth: 500, margin: '48px auto 0' }}>
+                <h4 style={{ fontSize: '0.85rem', color: '#9B99B0', marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Historical Moments</h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
                   {c.archetype_history.map((entry: { archetype: string; date: string }, i: number) => {
-                    const archData = ARCH_DATA[entry.archetype];
+                    const archData = ARCH_DATA[entry.archetype as keyof typeof ARCH_DATA];
                     if (!archData) return null;
                     const Icon = archData.icon;
                     return (
@@ -445,16 +528,16 @@ export default function BeautyPassport() {
                 <h4 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Clock size={16} /> Visit History
                 </h4>
-                <span className="badge badge-teal" style={{ fontWeight: 600 }}>{visitHistory.length} visits</span>
+                <span className="badge badge-teal" style={{ fontWeight: 600 }}>{(p.last_5_services ?? []).length} visits</span>
               </div>
-              {visitHistory.length === 0 ? (
+              {(p.last_5_services ?? []).length === 0 ? (
                 <div style={{ padding: '48px', textAlign: 'center', color: 'var(--text-muted)' }}>
                   <BookOpen size={32} style={{ marginBottom: 12, opacity: 0.3 }} />
                   <p>No visit history yet</p>
                 </div>
               ) : (
-                visitHistory.map((visit: any, i: number) => {
-                  const archData = visit.archetype ? ARCH_DATA[visit.archetype] : null;
+                (p.last_5_services ?? []).map((visit: any, i: number) => {
+                  const archData = visit.archetype_applied ? ARCH_DATA[visit.archetype_applied as keyof typeof ARCH_DATA] : null;
                   const ArchIcon = archData?.icon;
                   return (
                     <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
@@ -465,7 +548,7 @@ export default function BeautyPassport() {
                         </div>
                         <div>
                           <div style={{ fontWeight: 600, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 8 }}>
-                            {visit.service}
+                            {visit.service_name}
                             {archData && ArchIcon && (
                               <div style={{ background: `${archData.color}12`, padding: '2px 8px', borderRadius: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
                                 <ArchIcon size={10} color={archData.color} strokeWidth={3} />
@@ -474,17 +557,18 @@ export default function BeautyPassport() {
                             )}
                           </div>
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>
-                            {visit.date} &middot; {visit.stylist}
+                            {new Date(visit.date).toLocaleDateString()} &middot; {visit.category}
                           </div>
                         </div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                        <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{'\u20B9'}{(Number(visit.amount) || 0).toLocaleString()}</span>
-                        <div style={{ display: 'flex', gap: 2 }}>
-                          {[...Array(5)].map((_, s) => (
-                            <Star key={s} size={12} fill={s < visit.rating ? '#f44f9a' : 'transparent'} color={s < visit.rating ? '#f44f9a' : 'rgba(0,0,0,0.1)'} />
-                          ))}
-                        </div>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{'\u20B9'}{(Number(visit.final_price) || 0).toLocaleString()}</span>
+                        {visit.quality_score && (
+                           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <Activity size={12} color="var(--success)" />
+                              <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{visit.quality_score}% Quality</span>
+                           </div>
+                        )}
                       </div>
                     </motion.div>
                   );

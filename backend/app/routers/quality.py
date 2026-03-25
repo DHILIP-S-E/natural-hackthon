@@ -1,14 +1,25 @@
 """Quality & Skill Assessment router."""
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, func, Integer
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
 from datetime import datetime, timezone
 
 from app.database import get_db, enum_val
-from app.dependencies import get_current_user, require_role
+from app.dependencies import get_current_user, require_role, require_roles
+from app.agents.track1_standardization import (
+    service_time_monitor_handler,
+    cross_branch_benchmark_handler
+)
+from app.agents.track5_experience import (
+    service_transparency_feed_handler,
+    realtime_micro_feedback_handler,
+    MicroFeedbackRequest,
+)
 from app.models import QualityAssessment, SkillAssessment
+from app.models.user import User, UserRole
 from app.schemas.common import APIResponse
+
 
 router = APIRouter(prefix="/quality", tags=["Quality"])
 
@@ -206,3 +217,44 @@ async def create_skill_assessment(
     await db.commit()
     await db.refresh(assessment)
     return APIResponse(success=True, data={"id": str(assessment.id)}, message="Skill assessment created")
+
+
+@router.get("/agents/time-monitor", response_model=APIResponse)
+async def get_branch_time_monitor(
+    location_id: str = Query(...),
+    db: AsyncSession = Depends(get_db),
+    user=Depends(require_role(["salon_manager", "regional_manager", "super_admin"]))
+):
+    """AI Agent: Monitors active sessions for timing compliance, rushing, and overtime."""
+    return await service_time_monitor_handler(location_id, db, user)
+
+
+@router.get("/agents/benchmark", response_model=APIResponse)
+async def get_branch_benchmark(
+    service_id: str = Query(None),
+    db: AsyncSession = Depends(get_db),
+    user=Depends(require_role(["regional_manager", "franchise_owner", "super_admin"]))
+):
+    """AI Agent: Benchmarks branch performance against regional standards."""
+    return await cross_branch_benchmark_handler(service_id, db, user)
+
+
+@router.get("/agents/track5/transparency/feed", response_model=APIResponse)
+async def service_transparency_agent(
+    session_id: str = Query(...),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_roles([UserRole.CUSTOMER, UserRole.STYLIST, UserRole.SALON_MANAGER, UserRole.SUPER_ADMIN])),
+):
+    """Bridge to service_transparency_feed_handler."""
+    return await service_transparency_feed_handler(session_id, db, user)
+
+
+@router.post("/agents/track5/feedback/micro", response_model=APIResponse)
+async def micro_feedback_agent(
+    body: MicroFeedbackRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_roles([UserRole.CUSTOMER, UserRole.STYLIST, UserRole.SALON_MANAGER, UserRole.SUPER_ADMIN])),
+):
+    """Bridge to realtime_micro_feedback_handler."""
+    return await realtime_micro_feedback_handler(body, db, user)
+
