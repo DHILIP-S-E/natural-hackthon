@@ -26,8 +26,12 @@ async def today_bookings(
     """Get today's bookings."""
     from datetime import date
     today = date.today()
+    from datetime import datetime as dt, time
+    day_start = dt.combine(today, time.min)
+    day_end = dt.combine(today, time.max)
     q = select(Booking).where(
-        func.date(Booking.scheduled_at) == today
+        Booking.scheduled_at >= day_start,
+        Booking.scheduled_at <= day_end,
     ).order_by(Booking.scheduled_at)
     if location_id:
         q = q.where(Booking.location_id == location_id)
@@ -69,6 +73,7 @@ async def available_slots(
     from app.models.service import Service
 
     target_date = date_type.fromisoformat(date_str)
+    from datetime import datetime as dt, time
 
     # Get service duration
     slot_duration = 30
@@ -77,15 +82,27 @@ async def available_slots(
         if svc:
             slot_duration = svc.duration_minutes or 30
 
-    # Get all booked slots for this location+date
+    # Get all booked slots for this location+date (use range predicate for index)
+    day_start = dt.combine(target_date, time.min)
+    day_end = dt.combine(target_date, time.max)
     q = select(Booking).where(
-        func.date(Booking.scheduled_at) == target_date,
+        Booking.scheduled_at >= day_start,
+        Booking.scheduled_at <= day_end,
         Booking.location_id == location_id,
         Booking.status.notin_([BookingStatus.CANCELLED.value, BookingStatus.NO_SHOW.value,
                                 "cancelled", "no_show"]),
     )
     result = await db.execute(q)
     bookings = result.scalars().all()
+
+    # Batch-fetch all service durations to avoid N+1
+    service_ids = list({b.service_id for b in bookings if b.service_id})
+    service_durations: dict[str, int] = {}
+    if service_ids:
+        svc_result = await db.execute(
+            select(Service.id, Service.duration_minutes).where(Service.id.in_(service_ids))
+        )
+        service_durations = {row[0]: row[1] or 30 for row in svc_result.all()}
 
     # Build occupied time ranges (in minutes from midnight)
     occupied = []
@@ -96,12 +113,7 @@ async def available_slots(
                 start_min = scheduled.hour * 60 + scheduled.minute
             else:
                 continue
-            # Get service duration for this booking
-            dur = 30
-            if b.service_id:
-                bsvc = await db.get(Service, b.service_id)
-                if bsvc:
-                    dur = bsvc.duration_minutes or 30
+            dur = service_durations.get(b.service_id, 30) if b.service_id else 30
             occupied.append((start_min, start_min + dur))
 
     # Generate available 30-min slots from 9:00-20:00, excluding occupied

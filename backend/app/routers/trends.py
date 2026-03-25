@@ -12,17 +12,22 @@ router = APIRouter(prefix="/trends", tags=["Trends"])
 
 
 @router.get("/", response_model=APIResponse)
-async def list_trends(city: str = None, category: str = None,
+async def list_trends(city: str = None, category: str = None, limit: int = 100, offset: int = 0,
                       db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
+    from sqlalchemy import cast, String
     q = select(TrendSignal).where(TrendSignal.is_active == True).order_by(TrendSignal.overall_signal_strength.desc())
     if category:
         q = q.where(TrendSignal.service_category == category)
-    result = await db.execute(q)
+    # Filter city in SQL instead of Python to avoid loading all rows
+    if city:
+        q = q.where(
+            TrendSignal.applicable_cities.is_(None) |
+            cast(TrendSignal.applicable_cities, String).contains(city)
+        )
+    result = await db.execute(q.offset(offset).limit(limit))
     trends = result.scalars().all()
     data = []
     for t in trends:
-        if city and t.applicable_cities and city not in t.applicable_cities:
-            continue
         data.append({
             "id": str(t.id), "trend_name": t.trend_name, "slug": t.slug,
             "description": t.description, "service_category": t.service_category,

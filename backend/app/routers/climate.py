@@ -50,6 +50,7 @@ async def get_climate_alerts(db: AsyncSession = Depends(get_db), user=Depends(ge
         select(ClimateRecommendation)
         .where(ClimateRecommendation.is_alert == True, ClimateRecommendation.date_for >= date.today())
         .order_by(ClimateRecommendation.date_for)
+        .limit(100)
     )
     alerts = result.scalars().all()
     return APIResponse(success=True, data=[{
@@ -109,11 +110,16 @@ async def refresh_climate(
         )
         cities = [row[0] for row in result.all() if row[0]]
 
-    for c in cities:
+    # Use asyncio.gather for parallel HTTP calls instead of sequential loop
+    import asyncio
+
+    async def _refresh_one(c: str) -> str:
         try:
             await fetch_and_store_climate(c, db)
-            cities_refreshed.append(c)
+            return c
         except Exception as e:
-            cities_refreshed.append(f"{c} (failed: {str(e)[:50]})")
+            return f"{c} (failed: {str(e)[:50]})"
 
-    return APIResponse(success=True, data={"cities_refreshed": cities_refreshed}, message=f"Refreshed {len(cities_refreshed)} cities")
+    cities_refreshed = await asyncio.gather(*[_refresh_one(c) for c in cities])
+
+    return APIResponse(success=True, data={"cities_refreshed": list(cities_refreshed)}, message=f"Refreshed {len(cities_refreshed)} cities")

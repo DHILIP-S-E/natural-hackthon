@@ -250,17 +250,19 @@ async def get_session_timer(booking_id: UUID, db: AsyncSession = Depends(get_db)
     if not session:
         raise HTTPException(404, "Session not found")
 
-    # Get service duration from booking
+    # Get service duration from booking in a single joined query
     expected_mins = 60  # default
     if session.booking_id:
         from app.models.booking import Booking
         from app.models.service import Service
-        b_result = await db.execute(select(Booking).where(Booking.id == session.booking_id))
-        booking = b_result.scalar_one_or_none()
-        if booking and booking.service_id:
-            svc = await db.get(Service, booking.service_id)
-            if svc:
-                expected_mins = svc.duration_minutes or 60
+        timer_q = (
+            select(Service.duration_minutes)
+            .join(Booking, Booking.service_id == Service.id)
+            .where(Booking.id == session.booking_id)
+        )
+        dur_result = (await db.execute(timer_q)).scalar_one_or_none()
+        if dur_result:
+            expected_mins = dur_result or 60
 
     elapsed_mins = 0
     remaining_mins = expected_mins

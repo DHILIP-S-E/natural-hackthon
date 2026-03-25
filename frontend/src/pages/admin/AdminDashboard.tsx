@@ -5,28 +5,33 @@ import api from '../../config/api';
 
 export default function AdminDashboard() {
   const { data: overview } = useQuery({
-    queryKey: ['analytics-overview-admin'],
+    queryKey: ['analytics', 'overview'],
     queryFn: () => api.get('/analytics/overview').then(r => r.data?.data),
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: compare } = useQuery({
-    queryKey: ['analytics-compare-admin'],
+    queryKey: ['analytics', 'compare'],
     queryFn: () => api.get('/analytics/compare').then(r => r.data?.data),
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: soulskinData } = useQuery({
-    queryKey: ['analytics-soulskin-admin'],
+    queryKey: ['analytics', 'soulskin'],
     queryFn: () => api.get('/analytics/soulskin').then(r => r.data?.data),
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: registry } = useQuery({
-    queryKey: ['agent-registry-admin'],
+    queryKey: ['agents', 'registry'],
     queryFn: () => api.get('/agents/registry').then(r => r.data),
+    staleTime: 10 * 60 * 1000,
   });
 
   const { data: staffData } = useQuery({
-    queryKey: ['analytics-staff-admin'],
+    queryKey: ['analytics', 'staff'],
     queryFn: () => api.get('/analytics/staff').then(r => r.data?.data),
+    staleTime: 5 * 60 * 1000,
   });
 
   const totalRevenue = Number(overview?.total_revenue) || 0;

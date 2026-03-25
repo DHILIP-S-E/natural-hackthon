@@ -23,22 +23,22 @@ const STATUS_STYLES: Record<string, { color: string; bg: string }> = {
 export default function UsersPage() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('All');
+  const [page, setPage] = useState(1);
+  const perPage = 50;
 
-  const { data: users, isLoading } = useQuery({
-    queryKey: ['users'],
-    queryFn: () => api.get('/auth/users').then(r => {
-      const d = r.data?.data;
-      return Array.isArray(d) ? d : d?.users || d?.items || [];
-    }),
+  // Server-side search, filter, and pagination
+  const { data: usersResponse, isLoading } = useQuery({
+    queryKey: ['users', search, roleFilter, page],
+    queryFn: () => {
+      const params = new URLSearchParams({ page: String(page), per_page: String(perPage) });
+      if (search) params.set('search', search);
+      if (roleFilter !== 'All') params.set('role', roleFilter);
+      return api.get(`/roles/users/all?${params}`).then(r => r.data?.data);
+    },
   });
 
-  const list = Array.isArray(users) ? users : [];
-  const filtered = list.filter((u: any) => {
-    const matchSearch = (u.full_name ?? '').toLowerCase().includes(search.toLowerCase()) ||
-      (u.email ?? '').toLowerCase().includes(search.toLowerCase());
-    const matchRole = roleFilter === 'All' || u.role === roleFilter;
-    return matchSearch && matchRole;
-  });
+  const filtered = usersResponse?.users || [];
+  const total = usersResponse?.total || 0;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xl)' }}>
@@ -49,7 +49,7 @@ export default function UsersPage() {
           User Management
         </h1>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: 4 }}>
-          {list.length} users across all roles
+          {total} users across all roles
         </p>
       </div>
 
@@ -92,7 +92,7 @@ export default function UsersPage() {
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="card" style={{ padding: 0 }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h4 style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Users size={18} /> Users</h4>
-          <span className="badge badge-teal">{filtered.length} results</span>
+          <span className="badge badge-teal">{total} results</span>
         </div>
         <div className="table-container" style={{ border: 'none', borderRadius: 0 }}>
           <table>
@@ -100,7 +100,7 @@ export default function UsersPage() {
               <tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th></tr>
             </thead>
             <tbody>
-              {isLoading && !users ? (
+              {isLoading && !usersResponse ? (
                 [...Array(5)].map((_, i) => (
                   <tr key={i}>
                     <td style={{ padding: '14px 20px' }}><div style={{ width: 120, height: 16, background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', borderRadius: 4 }} /></td>
@@ -143,6 +143,17 @@ export default function UsersPage() {
           </table>
         </div>
       </motion.div>
+
+      {/* Pagination */}
+      {total > perPage && (
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
+          <button className="btn btn-ghost btn-sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Previous</button>
+          <span style={{ display: 'flex', alignItems: 'center', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+            Page {page} of {Math.ceil(total / perPage)}
+          </span>
+          <button className="btn btn-ghost btn-sm" disabled={page >= Math.ceil(total / perPage)} onClick={() => setPage(p => p + 1)}>Next</button>
+        </div>
+      )}
     </div>
   );
 }

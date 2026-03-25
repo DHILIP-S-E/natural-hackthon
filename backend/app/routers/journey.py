@@ -15,10 +15,12 @@ router = APIRouter(prefix="/journey", tags=["Beauty Journey"])
 
 
 @router.get("/", response_model=APIResponse)
-async def list_journeys(customer_id: UUID, db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
+async def list_journeys(customer_id: UUID, limit: int = 20, offset: int = 0,
+                        db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
     result = await db.execute(
         select(BeautyJourneyPlan).where(BeautyJourneyPlan.customer_id == str(customer_id))
         .order_by(BeautyJourneyPlan.created_at.desc())
+        .offset(offset).limit(limit)
     )
     plans = result.scalars().all()
     return APIResponse(success=True, data=[{
@@ -152,10 +154,12 @@ async def journey_progress(customer_id: UUID, db: AsyncSession = Depends(get_db)
 
 
 @router.get("/{customer_id}/history", response_model=APIResponse)
-async def journey_history(customer_id: UUID, db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
+async def journey_history(customer_id: UUID, limit: int = 50, offset: int = 0,
+                          db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
     result = await db.execute(
         select(BeautyJourneyPlan).where(BeautyJourneyPlan.customer_id == str(customer_id))
         .order_by(BeautyJourneyPlan.created_at.desc())
+        .limit(limit).offset(offset)
     )
     plans = result.scalars().all()
     return APIResponse(success=True, data=[{

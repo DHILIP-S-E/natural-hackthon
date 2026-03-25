@@ -8,18 +8,21 @@ const tooltipStyle = { backgroundColor: '#16161E', border: '1px solid #252530', 
 
 export default function RegionalDashboard() {
   const { data: compare } = useQuery({
-    queryKey: ['analytics-compare-regional'],
+    queryKey: ['analytics', 'compare'],
     queryFn: () => api.get('/analytics/compare').then(r => r.data?.data),
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: overview } = useQuery({
-    queryKey: ['analytics-overview-regional'],
+    queryKey: ['analytics', 'overview'],
     queryFn: () => api.get('/analytics/overview').then(r => r.data?.data),
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: staffData } = useQuery({
-    queryKey: ['analytics-staff-regional'],
+    queryKey: ['analytics', 'staff'],
     queryFn: () => api.get('/analytics/staff').then(r => r.data?.data),
+    staleTime: 5 * 60 * 1000,
   });
 
   const locations = compare?.locations || [];

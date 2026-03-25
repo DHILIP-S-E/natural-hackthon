@@ -13,38 +13,45 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 export default function BIDashboard() {
   const { data: overview } = useQuery({
-    queryKey: ['analytics-overview'],
+    queryKey: ['analytics', 'overview'],
     queryFn: () => api.get('/analytics/overview').then(r => r.data?.data),
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: revenue } = useQuery({
-    queryKey: ['analytics-revenue'],
+    queryKey: ['analytics', 'revenue', 180],
     queryFn: () => api.get('/analytics/revenue?days=180').then(r => r.data?.data),
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: quality } = useQuery({
-    queryKey: ['analytics-quality'],
+    queryKey: ['analytics', 'quality', 30],
     queryFn: () => api.get('/analytics/quality?days=30').then(r => r.data?.data),
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: customers } = useQuery({
-    queryKey: ['analytics-customers'],
+    queryKey: ['analytics', 'customers'],
     queryFn: () => api.get('/analytics/customers').then(r => r.data?.data),
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: compare } = useQuery({
-    queryKey: ['analytics-compare'],
+    queryKey: ['analytics', 'compare'],
     queryFn: () => api.get('/analytics/compare').then(r => r.data?.data),
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: soulskinData } = useQuery({
-    queryKey: ['analytics-soulskin'],
+    queryKey: ['analytics', 'soulskin'],
     queryFn: () => api.get('/analytics/soulskin').then(r => r.data?.data),
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: forecast } = useQuery({
-    queryKey: ['analytics-forecast'],
+    queryKey: ['analytics', 'forecast'],
     queryFn: () => api.get('/analytics/forecast').then(r => r.data?.data),
+    staleTime: 5 * 60 * 1000,
   });
 
   const totalRevenue = Number(overview?.total_revenue) || 0;

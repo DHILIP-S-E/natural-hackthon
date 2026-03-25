@@ -3,6 +3,7 @@ import axios from 'axios';
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1',
   headers: { 'Content-Type': 'application/json' },
+  timeout: 15000,
 });
 
 // Supabase client for direct storage/auth if needed
@@ -20,15 +21,39 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Response interceptor — handle 401 with token refresh
+// Token refresh state — prevents concurrent refresh race condition
+let isRefreshing = false;
+let refreshSubscribers: ((token: string) => void)[] = [];
+
+function onTokenRefreshed(token: string) {
+  refreshSubscribers.forEach((cb) => cb(token));
+  refreshSubscribers = [];
+}
+
+function addRefreshSubscriber(cb: (token: string) => void) {
+  refreshSubscribers.push(cb);
+}
+
+// Response interceptor — handle 401 with token refresh (race-safe)
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // Try refresh token on 401 (but not if already retrying)
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
+
+      if (isRefreshing) {
+        // Another request is already refreshing — wait for it
+        return new Promise((resolve) => {
+          addRefreshSubscriber((newToken: string) => {
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            resolve(api(originalRequest));
+          });
+        });
+      }
+
+      isRefreshing = true;
       const refreshToken = localStorage.getItem('aura_refresh_token');
 
       if (refreshToken) {
@@ -36,12 +61,15 @@ api.interceptors.response.use(
           const resp = await axios.post(
             `${originalRequest.baseURL}/auth/refresh`,
             null,
-            { params: { token: refreshToken } }
+            { params: { token: refreshToken }, timeout: 10000 }
           );
           if (resp.data?.success && resp.data?.data?.access_token) {
-            localStorage.setItem('aura_token', resp.data.data.access_token);
+            const newToken = resp.data.data.access_token;
+            localStorage.setItem('aura_token', newToken);
             localStorage.setItem('aura_refresh_token', resp.data.data.refresh_token);
-            originalRequest.headers.Authorization = `Bearer ${resp.data.data.access_token}`;
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            isRefreshing = false;
+            onTokenRefreshed(newToken);
             return api(originalRequest);
           }
         } catch {
@@ -49,6 +77,8 @@ api.interceptors.response.use(
         }
       }
 
+      isRefreshing = false;
+      refreshSubscribers = [];
       localStorage.removeItem('aura_token');
       localStorage.removeItem('aura_refresh_token');
       localStorage.removeItem('aura_user');

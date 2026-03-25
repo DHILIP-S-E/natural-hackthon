@@ -134,10 +134,12 @@ async def get_latest_plan(customer_id: UUID, db: AsyncSession = Depends(get_db),
 
 
 @router.get("/{customer_id}/history", response_model=APIResponse)
-async def homecare_history(customer_id: UUID, db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
+async def homecare_history(customer_id: UUID, limit: int = 50, offset: int = 0,
+                           db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
     result = await db.execute(
         select(HomecarePlan).where(HomecarePlan.customer_id == str(customer_id))
         .order_by(HomecarePlan.created_at.desc())
+        .limit(limit).offset(offset)
     )
     plans = result.scalars().all()
     return APIResponse(success=True, data=[{

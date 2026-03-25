@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Sparkles, Heart, Calendar, BookOpen, Award, TrendingUp, Sun, Droplets, Wind, Eye, Star, Shield } from 'lucide-react';
@@ -8,6 +8,11 @@ import { Icon3D } from '../../components/ui/Icon3D';
 import api from '../../config/api';
 import { useAuthStore } from '../../stores/authStore';
 import { ARCH_DATA } from '../../constants/archetypes';
+
+// Skeleton defined outside render to avoid remount on re-render
+const Skeleton = ({ width = '100%', height = 20 }: { width?: string | number; height?: number }) => (
+  <div style={{ width, height, background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite', borderRadius: 'var(--radius-sm)' }} />
+);
 
 export default function CustomerDashboard() {
   const [activeTab, setActiveTab] = useState<'passport' | 'soulskin' | 'journey'>('passport');
@@ -85,11 +90,6 @@ export default function CustomerDashboard() {
   }));
 
   const isLoading = profileLoading && !profileData;
-
-  // Skeleton placeholder for loading state
-  const Skeleton = ({ width = '100%', height = 20 }: { width?: string | number; height?: number }) => (
-    <div style={{ width, height, background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite', borderRadius: 'var(--radius-sm)' }} />
-  );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xl)' }}>

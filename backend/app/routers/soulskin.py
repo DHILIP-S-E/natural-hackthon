@@ -190,6 +190,7 @@ async def get_soul_journal(
         select(SoulskinSession)
         .where(SoulskinSession.customer_id == customer_id, SoulskinSession.session_completed == True)
         .order_by(SoulskinSession.created_at.desc())
+        .limit(50)
     )
     sessions = result.scalars().all()
 

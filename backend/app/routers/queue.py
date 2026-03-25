@@ -27,18 +27,23 @@ async def _smart_wait_estimate(location_id: str, service_id: str = None, db: Asy
     )
     entries = result.scalars().all()
 
+    # Batch-fetch all service durations to avoid N+1
+    all_service_ids = list({e.service_id for e in entries if e.service_id})
+    if service_id and service_id not in all_service_ids:
+        all_service_ids.append(service_id)
+    svc_durations: dict[str, int] = {}
+    if all_service_ids:
+        svc_result = await db.execute(
+            select(Service.id, Service.duration_minutes).where(Service.id.in_(all_service_ids))
+        )
+        svc_durations = {row[0]: row[1] or 30 for row in svc_result.all()}
+
     total_wait = 0
     for e in entries:
-        # Get service duration
-        svc_dur = 30  # default
-        if e.service_id:
-            svc = await db.get(Service, e.service_id)
-            if svc:
-                svc_dur = svc.duration_minutes or 30
+        svc_dur = svc_durations.get(e.service_id, 30) if e.service_id else 30
 
         status = enum_val(e.status) if hasattr(e.status, 'value') else str(e.status)
         if status == "in_service" and e.service_started_at:
-            # For in-service entries, calculate remaining time
             elapsed = (datetime.now(timezone.utc) - e.service_started_at).total_seconds() / 60
             remaining = max(svc_dur - elapsed, 2)
             total_wait += int(remaining)
@@ -47,9 +52,7 @@ async def _smart_wait_estimate(location_id: str, service_id: str = None, db: Asy
 
     # Add this customer's service duration
     if service_id:
-        this_svc = await db.get(Service, service_id)
-        if this_svc:
-            total_wait += this_svc.duration_minutes or 0
+        total_wait += svc_durations.get(service_id, 0)
 
     return max(total_wait, 0)
 

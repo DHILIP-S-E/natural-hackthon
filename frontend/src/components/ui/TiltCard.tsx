@@ -48,7 +48,7 @@ export function TiltCard({ children, className = '', style = {}, tiltIntensity =
         transformStyle: "preserve-3d",
         perspective: "1200px",
         height: '100%',
-        willChange: 'transform',
+        /* willChange set on hover only via framer-motion */
         zIndex: 1,
         ...style
       }}

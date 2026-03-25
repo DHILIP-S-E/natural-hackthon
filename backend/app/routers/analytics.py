@@ -36,49 +36,39 @@ async def analytics_overview(
     db: AsyncSession = Depends(get_db),
 ):
     """Get overview analytics for dashboard."""
-    bookings_q = select(func.count()).select_from(Booking)
+    # Combined booking stats in a single query using CASE expressions
+    booking_agg = select(
+        func.count().label("total"),
+        func.sum(case((Booking.status == BookingStatus.COMPLETED, 1), else_=0)).label("completed"),
+        func.sum(case((Booking.status == BookingStatus.NO_SHOW, 1), else_=0)).label("no_shows"),
+        func.sum(case((Booking.status == BookingStatus.COMPLETED, Booking.final_price), else_=0)).label("revenue"),
+    )
     if location_id:
-        bookings_q = bookings_q.where(Booking.location_id == location_id)
-    total_bookings = (await db.execute(bookings_q)).scalar() or 0
+        booking_agg = booking_agg.where(Booking.location_id == location_id)
+    brow = (await db.execute(booking_agg)).one()
+    total_bookings = brow.total or 0
+    completed = int(brow.completed or 0)
+    no_shows = int(brow.no_shows or 0)
+    total_revenue = float(brow.revenue or 0)
 
-    completed_q = select(func.count()).select_from(Booking).where(Booking.status == BookingStatus.COMPLETED)
-    if location_id:
-        completed_q = completed_q.where(Booking.location_id == location_id)
-    completed = (await db.execute(completed_q)).scalar() or 0
-
-    revenue_q = select(func.sum(Booking.final_price)).where(Booking.status == BookingStatus.COMPLETED)
-    if location_id:
-        revenue_q = revenue_q.where(Booking.location_id == location_id)
-    total_revenue = (await db.execute(revenue_q)).scalar() or 0
-
+    # Quality + feedback + soulskin + customers in parallel-ish (3 remaining queries)
     quality_q = select(func.avg(QualityAssessment.overall_score))
-    if location_id:
-        quality_q = quality_q.where(QualityAssessment.location_id == location_id)
-    avg_quality = (await db.execute(quality_q)).scalar() or 0
-
+    feedback_q = select(func.avg(CustomerFeedback.overall_rating))
     soulskin_q = select(func.count()).select_from(SoulskinSession).where(SoulskinSession.session_completed == True)
     if location_id:
-        soulskin_q = soulskin_q.where(SoulskinSession.location_id == location_id)
-    soulskin_count = (await db.execute(soulskin_q)).scalar() or 0
-
-    customer_count_q = select(func.count()).select_from(CustomerProfile)
-    total_customers = (await db.execute(customer_count_q)).scalar() or 0
-
-    feedback_q = select(func.avg(CustomerFeedback.overall_rating))
-    if location_id:
+        quality_q = quality_q.where(QualityAssessment.location_id == location_id)
         feedback_q = feedback_q.where(CustomerFeedback.location_id == location_id)
-    avg_rating = (await db.execute(feedback_q)).scalar() or 0
+        soulskin_q = soulskin_q.where(SoulskinSession.location_id == location_id)
 
-    # No-show rate
-    noshow_q = select(func.count()).select_from(Booking).where(Booking.status == BookingStatus.NO_SHOW)
-    if location_id:
-        noshow_q = noshow_q.where(Booking.location_id == location_id)
-    no_shows = (await db.execute(noshow_q)).scalar() or 0
+    avg_quality = (await db.execute(quality_q)).scalar() or 0
+    avg_rating = (await db.execute(feedback_q)).scalar() or 0
+    soulskin_count = (await db.execute(soulskin_q)).scalar() or 0
+    total_customers = (await db.execute(select(func.count()).select_from(CustomerProfile))).scalar() or 0
 
     return APIResponse(success=True, data={
         "total_bookings": total_bookings,
         "completed_bookings": completed,
-        "total_revenue": float(total_revenue),
+        "total_revenue": total_revenue,
         "avg_quality_score": round(float(avg_quality), 2) if avg_quality else 0,
         "soulskin_sessions": soulskin_count,
         "total_customers": total_customers,
@@ -182,19 +172,20 @@ async def staff_analytics(
     db: AsyncSession = Depends(get_db),
 ):
     """Staff performance leaderboard — services, revenue, quality per stylist."""
-    q = select(StaffProfile).where(StaffProfile.is_available == True)
+    # Join StaffProfile with User to avoid N+1
+    q = (
+        select(StaffProfile, User.first_name, User.last_name)
+        .join(User, StaffProfile.user_id == User.id)
+        .where(StaffProfile.is_available == True)
+    )
     if location_id:
         q = q.where(StaffProfile.location_id == location_id)
     result = await db.execute(q)
-    staff = result.scalars().all()
+    rows = result.all()
 
     staff_data = []
-    for s in staff:
-        # Get user name
-        user_q = await db.execute(select(User).where(User.id == s.user_id))
-        user = user_q.scalar_one_or_none()
-        name = f"{user.first_name} {user.last_name}" if user else "Unknown"
-
+    for s, first_name, last_name in rows:
+        name = f"{first_name} {last_name}" if first_name else "Unknown"
         staff_data.append({
             "id": s.id, "name": name,
             "skill_level": s.skill_level,
@@ -287,29 +278,31 @@ async def attrition_analytics(
     db: AsyncSession = Depends(get_db),
 ):
     """Staff attrition risk overview."""
-    q = select(StaffProfile)
+    # Join with User to avoid N+1 for high-risk staff names
+    q = (
+        select(StaffProfile, User.first_name, User.last_name)
+        .join(User, StaffProfile.user_id == User.id)
+    )
     if location_id:
         q = q.where(StaffProfile.location_id == location_id)
     result = await db.execute(q)
-    staff = result.scalars().all()
+    rows = result.all()
 
     risk_counts = {"low": 0, "medium": 0, "high": 0}
     high_risk_staff = []
-    for s in staff:
+    for s, first_name, last_name in rows:
         risk = s.attrition_risk_label or "low"
         risk_counts[risk] = risk_counts.get(risk, 0) + 1
         if risk == "high":
-            user_q = await db.execute(select(User).where(User.id == s.user_id))
-            user = user_q.scalar_one_or_none()
             high_risk_staff.append({
                 "id": s.id,
-                "name": f"{user.first_name} {user.last_name}" if user else "Unknown",
+                "name": f"{first_name} {last_name}" if first_name else "Unknown",
                 "risk_score": float(s.attrition_risk_score or 0),
                 "skill_level": s.skill_level,
             })
 
     return APIResponse(success=True, data={
-        "total_staff": len(staff),
+        "total_staff": len(rows),
         "risk_distribution": risk_counts,
         "high_risk_staff": high_risk_staff,
     })
@@ -324,38 +317,58 @@ async def compare_locations(
     loc_result = await db.execute(select(Location).where(Location.is_active == True))
     locations = loc_result.scalars().all()
 
+    # Batch-fetch all metrics per location in 3 queries instead of 4*N
+    loc_ids = [loc.id for loc in locations]
+
+    # Revenue + booking count per location
+    rev_q = (
+        select(
+            Booking.location_id,
+            func.sum(Booking.final_price),
+            func.count(),
+        )
+        .where(Booking.location_id.in_(loc_ids))
+        .group_by(Booking.location_id)
+    )
+    rev_result = await db.execute(rev_q)
+    rev_map: dict = {}
+    bookings_map: dict = {}
+    for loc_id, rev, cnt in rev_result.all():
+        rev_map[loc_id] = float(rev or 0)
+        bookings_map[loc_id] = cnt
+
+    # Completed-only revenue
+    rev_completed_q = (
+        select(Booking.location_id, func.sum(Booking.final_price))
+        .where(Booking.location_id.in_(loc_ids), Booking.status == BookingStatus.COMPLETED)
+        .group_by(Booking.location_id)
+    )
+    rev_completed = {row[0]: float(row[1] or 0) for row in (await db.execute(rev_completed_q)).all()}
+
+    # Quality per location
+    qual_q = (
+        select(QualityAssessment.location_id, func.avg(QualityAssessment.overall_score))
+        .where(QualityAssessment.location_id.in_(loc_ids))
+        .group_by(QualityAssessment.location_id)
+    )
+    qual_map = {row[0]: float(row[1] or 0) for row in (await db.execute(qual_q)).all()}
+
+    # SOULSKIN per location
+    ss_q = (
+        select(SoulskinSession.location_id, func.count())
+        .where(SoulskinSession.location_id.in_(loc_ids), SoulskinSession.session_completed == True)
+        .group_by(SoulskinSession.location_id)
+    )
+    ss_map = {row[0]: row[1] for row in (await db.execute(ss_q)).all()}
+
     comparisons = []
     for loc in locations:
-        # Revenue
-        rev = (await db.execute(
-            select(func.sum(Booking.final_price)).where(
-                Booking.location_id == loc.id, Booking.status == BookingStatus.COMPLETED
-            )
-        )).scalar() or 0
-
-        # Quality
-        qual = (await db.execute(
-            select(func.avg(QualityAssessment.overall_score)).where(QualityAssessment.location_id == loc.id)
-        )).scalar() or 0
-
-        # Bookings
-        bookings = (await db.execute(
-            select(func.count()).select_from(Booking).where(Booking.location_id == loc.id)
-        )).scalar() or 0
-
-        # SOULSKIN
-        soulskin = (await db.execute(
-            select(func.count()).select_from(SoulskinSession).where(
-                SoulskinSession.location_id == loc.id, SoulskinSession.session_completed == True
-            )
-        )).scalar() or 0
-
         comparisons.append({
             "id": loc.id, "name": loc.name, "code": loc.code, "city": loc.city,
-            "revenue": float(rev),
-            "avg_quality": round(float(qual), 2) if qual else 0,
-            "total_bookings": bookings,
-            "soulskin_sessions": soulskin,
+            "revenue": rev_completed.get(loc.id, 0),
+            "avg_quality": round(qual_map.get(loc.id, 0), 2),
+            "total_bookings": bookings_map.get(loc.id, 0),
+            "soulskin_sessions": ss_map.get(loc.id, 0),
             "target": float(loc.monthly_revenue_target or 0),
         })
 

@@ -11,8 +11,9 @@ export default function StylistPerformance() {
   const user = useAuthStore(s => s.user);
 
   const { data: staffData } = useQuery({
-    queryKey: ['analytics-staff'],
+    queryKey: ['analytics', 'staff'],
     queryFn: () => api.get('/analytics/staff').then(r => r.data?.data),
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: qualityData } = useQuery({
@@ -29,15 +30,16 @@ export default function StylistPerformance() {
   });
 
   const { data: skillData } = useQuery({
-    queryKey: ['analytics-skill-gap'],
+    queryKey: ['analytics', 'skill-gap'],
     queryFn: () => api.get('/analytics/skill-gap').then(r => r.data?.data),
+    staleTime: 10 * 60 * 1000,
   });
 
-  // Find current user's staff profile
+  // Find current user's staff profile by user ID (not fuzzy name match)
   const allStaff = staffData?.staff || [];
-  const myProfile = allStaff.find((s: any) =>
-    (s.name ?? '').toLowerCase().includes((user?.first_name ?? '').toLowerCase() || '___')
-  ) || allStaff[0];
+  const myProfile = allStaff.find((s: any) => s.user_id === user?.id)
+    || allStaff.find((s: any) => s.id === user?.staff_id)
+    || allStaff[0];
 
   const ranking = myProfile ? allStaff.indexOf(myProfile) + 1 : 0;
   const totalRevenue = myProfile ? Math.round((Number(myProfile.total_revenue) || 0) / 100000 * 10) / 10 : 0;

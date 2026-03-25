@@ -13,11 +13,12 @@ router = APIRouter(prefix="/sops", tags=["SOPs"])
 
 
 @router.get("/", response_model=APIResponse)
-async def list_sops(service_id: UUID = None, db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
+async def list_sops(service_id: UUID = None, limit: int = 100, offset: int = 0,
+                    db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
     q = select(SOP).order_by(SOP.created_at.desc())
     if service_id:
         q = q.where(SOP.service_id == service_id)
-    result = await db.execute(q)
+    result = await db.execute(q.limit(limit).offset(offset))
     sops = result.scalars().all()
     return APIResponse(success=True, data=[{
         "id": str(s.id), "title": s.title, "version": s.version,

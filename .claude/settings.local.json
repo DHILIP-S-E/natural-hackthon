@@ -7,7 +7,9 @@
       "Bash(python -c \"import py_compile; py_compile.compile\\(''app/routers/sessions.py'', doraise=True\\); py_compile.compile\\(''app/routers/queue.py'', doraise=True\\); print\\(''OK''\\)\")",
       "Bash(python -c \":*)",
       "Bash(pip list:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(find \"C:\\\\github\\\\bgrowapp\\\\server\\\\actions\\\\admin\" -name \"*.ts\" -type f -exec grep -l \"middleware:\\\\s*\\\\[\\\\s*\\\\]\" {})",
+      "Bash(find \"C:\\\\github\\\\bgrowapp\\\\server\\\\actions\\\\public\" -name \"*.ts\" -type f -exec grep -l \"middleware:\\\\s*\\\\[\\\\s*\\\\]\" {})"
     ]
   }
 }

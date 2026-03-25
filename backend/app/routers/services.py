@@ -27,7 +27,7 @@ async def list_services(
     if category:
         query = query.where(Service.category == category)
 
-    result = await db.execute(query.order_by(Service.category, Service.name))
+    result = await db.execute(query.order_by(Service.category, Service.name).limit(200))
     services = result.scalars().all()
 
     return APIResponse(success=True, data=[

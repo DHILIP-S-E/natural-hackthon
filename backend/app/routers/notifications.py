@@ -1,5 +1,5 @@
 """Notifications router — Multi-channel notification management."""
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
@@ -14,7 +14,7 @@ router = APIRouter(prefix="/notifications", tags=["Notifications"])
 
 
 @router.get("/", response_model=APIResponse)
-async def list_notifications(page: int = 1, per_page: int = 20,
+async def list_notifications(page: int = Query(1, ge=1), per_page: int = Query(20, ge=1, le=100),
                              db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
     result = await db.execute(
         select(Notification)

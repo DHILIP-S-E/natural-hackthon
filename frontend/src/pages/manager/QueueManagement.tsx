@@ -34,6 +34,7 @@ export default function QueueManagement() {
     queryKey: ['queue', locationId],
     queryFn: () => api.get(`/queue/${locationId}`).then(r => r.data?.data),
     enabled: !!locationId,
+    refetchInterval: 15_000, // Live queue: refresh every 15 seconds
   });
 
   const queue = Array.isArray(queueData) ? queueData : queueData?.entries || [];

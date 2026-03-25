@@ -28,8 +28,8 @@ engine_kwargs = {
 }
 
 if not is_sqlite:
-    engine_kwargs["pool_size"] = 20
-    engine_kwargs["max_overflow"] = 10
+    engine_kwargs["pool_size"] = 30
+    engine_kwargs["max_overflow"] = 20
 
 if is_sqlite:
     engine_kwargs["connect_args"] = {"check_same_thread": False}

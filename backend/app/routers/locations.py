@@ -183,16 +183,17 @@ async def location_staff(
 ):
     """Get staff at a location."""
     from app.models.staff import StaffProfile
+    # Join with User to avoid N+1
     result = await db.execute(
-        select(StaffProfile).where(StaffProfile.location_id == location_id)
+        select(StaffProfile, User.first_name, User.last_name)
+        .join(User, StaffProfile.user_id == User.id)
+        .where(StaffProfile.location_id == location_id)
     )
-    staff = result.scalars().all()
+    rows = result.all()
     staff_data = []
-    for s in staff:
-        user_r = await db.execute(select(User).where(User.id == s.user_id))
-        u = user_r.scalar_one_or_none()
+    for s, first_name, last_name in rows:
         staff_data.append({
-            "id": s.id, "name": f"{u.first_name} {u.last_name}" if u else "Unknown",
+            "id": s.id, "name": f"{first_name} {last_name}" if first_name else "Unknown",
             "skill_level": s.skill_level, "designation": s.designation,
             "is_available": s.is_available, "current_rating": float(s.current_rating or 0),
             "soulskin_certified": s.soulskin_certified,

@@ -24,18 +24,21 @@ export default function ManagerDashboard() {
   });
 
   const { data: staffData } = useQuery({
-    queryKey: ['analytics-staff-dashboard'],
+    queryKey: ['analytics', 'staff'],
     queryFn: () => api.get('/analytics/staff').then(r => r.data?.data),
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: climateData } = useQuery({
-    queryKey: ['climate-dashboard'],
+    queryKey: ['climate', 'dashboard'],
     queryFn: () => api.get('/climate/').then(r => r.data?.data).catch(() => null),
+    staleTime: 10 * 60 * 1000,
   });
 
   const { data: soulskinData } = useQuery({
-    queryKey: ['analytics-soulskin-dashboard'],
+    queryKey: ['analytics', 'soulskin'],
     queryFn: () => api.get('/analytics/soulskin').then(r => r.data?.data),
+    staleTime: 5 * 60 * 1000,
   });
 
   // Build KPI data from API

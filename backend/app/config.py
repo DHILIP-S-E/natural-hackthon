@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     # App
     APP_NAME: str = "AURA"
     APP_ENV: str = "development"
-    DEBUG: bool = True
+    DEBUG: bool = False
     API_V1_PREFIX: str = "/api/v1"
 
     # Database (Supabase PostgreSQL)

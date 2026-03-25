@@ -200,24 +200,23 @@ async def customer_history(
 ):
     """Get customer's service history timeline."""
     from app.models.service import Service
+
+    # Join Booking with Service to avoid N+1
     result = await db.execute(
-        select(Booking)
+        select(Booking, Service.name, Service.category)
+        .outerjoin(Service, Booking.service_id == Service.id)
         .where(Booking.customer_id == customer_id, Booking.status == BookingStatus.COMPLETED)
         .order_by(Booking.scheduled_at.desc())
         .limit(50)
     )
-    bookings = result.scalars().all()
+    rows = result.all()
 
     history = []
-    for b in bookings:
-        svc = None
-        if b.service_id:
-            svc_result = await db.execute(select(Service).where(Service.id == b.service_id))
-            svc = svc_result.scalar_one_or_none()
+    for b, svc_name, svc_category in rows:
         history.append({
             "booking_id": b.id, "booking_number": b.booking_number,
-            "service_name": svc.name if svc else "Unknown",
-            "service_category": svc.category if svc else None,
+            "service_name": svc_name or "Unknown",
+            "service_category": svc_category,
             "scheduled_at": str(b.scheduled_at) if b.scheduled_at else None,
             "final_price": float(b.final_price) if b.final_price else None,
             "location_id": b.location_id,

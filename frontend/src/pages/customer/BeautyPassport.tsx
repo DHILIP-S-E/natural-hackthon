@@ -38,7 +38,7 @@ export default function BeautyPassport() {
 
   const customerId = 'me'; // current logged-in customer
   const { data: customer, isLoading } = useQuery({
-    queryKey: ['customer', customerId],
+    queryKey: ['customer-profile', customerId],
     queryFn: async () => {
       const res = await api.get(`/customers/${customerId}`);
       return res.data.data as CustomerProfile;

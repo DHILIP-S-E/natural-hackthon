@@ -96,17 +96,22 @@ async def list_roles(
     current_user: User = Depends(get_current_user),
 ):
     """List all available roles with user counts."""
+    # Single GROUP BY query instead of 6 sequential COUNTs
+    count_q = (
+        select(User.role, func.count())
+        .where(User.is_deleted == False)
+        .group_by(User.role)
+    )
+    count_result = await db.execute(count_q)
+    role_counts = {str(row[0].value if hasattr(row[0], 'value') else row[0]): row[1] for row in count_result.all()}
+
     roles = []
     for role in UserRole:
-        count_q = select(func.count()).select_from(User).where(
-            User.role == role.value, User.is_deleted == False
-        )
-        count = (await db.execute(count_q)).scalar() or 0
         roles.append({
             "name": role.name,
             "value": role.value,
             "description": ROLE_DESCRIPTIONS.get(role, ""),
-            "user_count": count,
+            "user_count": role_counts.get(role.value, 0),
         })
     return APIResponse(success=True, data=roles)
 
