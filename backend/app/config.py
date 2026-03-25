@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379/0"
 
     # CORS
-    CORS_ORIGINS: str = "http://localhost:5173"
+    CORS_ORIGINS: str = "http://localhost:5173,https://natural-hackthon-iohb.vercel.app,https://natural.dhilip.in,http://localhost:3000"
 
     # Storage (MinIO / S3-compatible — Supabase Storage)
     STORAGE_BACKEND: str = "minio"  # "minio", "s3", "supabase"

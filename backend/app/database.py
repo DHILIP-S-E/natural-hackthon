@@ -28,8 +28,9 @@ engine_kwargs = {
 }
 
 if not is_sqlite:
-    engine_kwargs["pool_size"] = 30
-    engine_kwargs["max_overflow"] = 20
+    # Use small pool for serverless (Vercel); each invocation is short-lived
+    engine_kwargs["pool_size"] = 2
+    engine_kwargs["max_overflow"] = 3
 
 if is_sqlite:
     engine_kwargs["connect_args"] = {"check_same_thread": False}
