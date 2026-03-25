@@ -16,7 +16,7 @@ export default function StylistPerformance() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: qualityData } = useQuery({
+  const { data: _qualityData } = useQuery({
     queryKey: ['quality-assessments-mine'],
     queryFn: () => api.get('/quality/?per_page=10').then(r => r.data?.data || []),
   });
@@ -29,7 +29,7 @@ export default function StylistPerformance() {
     }),
   });
 
-  const { data: skillData } = useQuery({
+  const { data: _skillData } = useQuery({
     queryKey: ['analytics', 'skill-gap'],
     queryFn: () => api.get('/analytics/skill-gap').then(r => r.data?.data),
     staleTime: 10 * 60 * 1000,
@@ -38,7 +38,7 @@ export default function StylistPerformance() {
   // Find current user's staff profile by user ID (not fuzzy name match)
   const allStaff = staffData?.staff || [];
   const myProfile = allStaff.find((s: any) => s.user_id === user?.id)
-    || allStaff.find((s: any) => s.id === user?.staff_id)
+    || allStaff.find((s: any) => s.id === (user as any)?.staff_id)
     || allStaff[0];
 
   const ranking = myProfile ? allStaff.indexOf(myProfile) + 1 : 0;

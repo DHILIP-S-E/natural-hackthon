@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ChevronLeft, ChevronRight, CheckCircle, AlertTriangle, Clock, Camera,
+  ChevronLeft, CheckCircle, AlertTriangle, Clock, Camera,
   Sparkles, MessageCircle, X, Beaker, Play, Pause, Award, FileText, Activity
 } from 'lucide-react';
 import api from '../../config/api';
@@ -206,7 +206,7 @@ export default function LiveSession() {
       <div style={{ flex: 1, overflow: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
         {/* Step navigation dots */}
         <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
-          {sopSteps.map((s, i) => (
+          {sopSteps.map((_s, i) => (
             <button key={i} onClick={() => setCurrentStep(i + 1)}
               style={{
                 width: i + 1 === currentStep ? 28 : 10, height: 10, borderRadius: 5, border: 'none', cursor: 'pointer',

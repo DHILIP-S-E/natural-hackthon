@@ -237,7 +237,7 @@ export default function SoulskinAnalytics() {
           </h4>
           <span className="badge badge-violet" style={{ fontWeight: 600 }}>{CERTIFIED_STAFF.length} certified</span>
         </div>
-        {CERTIFIED_STAFF.map((staff, i) => (
+        {CERTIFIED_STAFF.map((staff, _i) => (
           <div key={staff.name} style={{
             padding: '14px 20px', borderBottom: '1px solid var(--border-subtle)',
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',

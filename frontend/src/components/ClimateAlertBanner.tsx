@@ -9,7 +9,7 @@ interface Props {
   weatherCondition: string;
 }
 
-export default function ClimateAlertBanner({ city, uvIndex, humidity, aqi, weatherCondition }: Props) {
+export default function ClimateAlertBanner({ city, uvIndex, aqi, weatherCondition }: Props) {
   const [dismissed, setDismissed] = useState(false);
 
   const highUV = uvIndex > 8;

@@ -70,7 +70,7 @@ export default function RBACPage() {
               </tr>
             </thead>
             <tbody>
-              {CAPABILITIES.map((cap, i) => (
+              {CAPABILITIES.map((cap, _i) => (
                 <tr key={cap}>
                   <td style={{
                     padding: '12px 20px', fontWeight: 600, fontSize: '0.8rem',

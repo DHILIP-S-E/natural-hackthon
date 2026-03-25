@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Calendar, Clock, MapPin, Search, Scissors, Star, DollarSign, ChevronRight, CheckCircle, Loader2 } from 'lucide-react';
+import { Clock, MapPin, Search, Star, ChevronRight, CheckCircle, Loader2 } from 'lucide-react';
 import api from '../../config/api';
 
 const CATEGORIES = ['All', 'Hair', 'Skin', 'Nail', 'Makeup', 'Wellness'];

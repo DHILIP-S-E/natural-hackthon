@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  FileText, Plus, Search, ChevronRight, ChevronDown, Eye, Edit,
-  AlertTriangle, Beaker, Clock, CheckCircle, X, Activity, Sparkles
+  FileText, Plus, Search, ChevronDown, Eye,
+  AlertTriangle, Beaker, Clock, Activity
 } from 'lucide-react';
 import api from '../../config/api';
 import { ARCH_DATA } from '../../constants/archetypes';

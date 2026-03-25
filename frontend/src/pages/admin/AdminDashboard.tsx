@@ -125,7 +125,7 @@ export default function AdminDashboard() {
             <h4 style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Brain size={18} style={{ color: 'var(--violet)' }} /> AI Agents ({registry?.total_agents || 0})</h4>
           </div>
           <div>
-            {registry?.tracks ? Object.entries(registry.tracks).map(([track, info]: [string, any], i: number) => (
+            {registry?.tracks ? Object.entries(registry.tracks).map(([track, info]: [string, any]) => (
               <div key={track} style={{ padding: '10px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
                   <div style={{ fontSize: '0.8rem', fontWeight: 500, textTransform: 'capitalize' }}>{track}</div>

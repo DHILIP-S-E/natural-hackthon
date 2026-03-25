@@ -113,7 +113,7 @@ export default function UsersPage() {
                 <tr>
                   <td colSpan={4} style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }}>No users found.</td>
                 </tr>
-              ) : filtered.map((user, i) => {
+              ) : filtered.map((user: any, i: any) => {
                 const rc = ROLE_COLORS[user.role] || ROLE_COLORS.customer;
                 const sc = STATUS_STYLES[user.status] || STATUS_STYLES.active;
                 return (

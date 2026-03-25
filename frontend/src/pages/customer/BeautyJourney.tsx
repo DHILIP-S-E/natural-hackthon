@@ -2,13 +2,12 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
-  MapPin, Calendar, Target, TrendingUp, ShoppingBag, Home, BarChart3,
-  ChevronRight, CheckCircle, Circle, Star, Clock, Sparkles, RefreshCw
+  MapPin, Calendar, Target, ShoppingBag, Home, BarChart3,
+  CheckCircle, Circle, Clock, RefreshCw
 } from 'lucide-react';
 import api from '../../config/api';
 import BeautyScoreRing from '../../components/BeautyScoreRing';
 import { ARCH_DATA } from '../../constants/archetypes';
-import type { Archetype } from '../../types';
 
 type TabKey = 'salon' | 'homecare' | 'products' | 'progress';
 
@@ -204,7 +203,7 @@ export default function BeautyJourney() {
                     <Clock size={16} style={{ color: '#f44f9a' }} /> {routine.time}
                   </h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {routine.steps.map((step, j) => (
+                    {routine.steps.map((step: any, j: number) => (
                       <div key={j} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '0.85rem' }}>
                         <Circle size={8} style={{ color: 'var(--border-medium)', flexShrink: 0 }} />
                         {step}

@@ -8,7 +8,7 @@ import {
   TrendingUp, MessageSquare, Bell, Settings, LogOut, ChevronLeft,
   Sparkles, ClipboardList, GraduationCap, Users2, GitCompare,
   Map, Shield, Brain, Activity, Home, BookOpenCheck, Scan,
-  Heart, Palette, Route, User
+  Heart, Route, User
 } from 'lucide-react';
 import type { UserRole } from '../../types';
 

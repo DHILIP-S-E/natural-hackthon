@@ -2,11 +2,10 @@ import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
   Sun, Moon as MoonIcon, Calendar, Droplets, Scissors, CheckCircle, XCircle,
-  ShoppingBag, Sparkles, Send, Heart, Activity
+  ShoppingBag, Sparkles, Send, Activity
 } from 'lucide-react';
 import api from '../../config/api';
 import { ARCH_DATA } from '../../constants/archetypes';
-import type { Archetype } from '../../types';
 
 const ARCH_RITUALS: Record<string, string> = {
   phoenix: 'Light a candle before your evening routine. Focus on what you are releasing and what you are becoming.',
@@ -198,7 +197,7 @@ export default function HomecarePage() {
             <p>No product recommendations yet</p>
           </div>
         ) : (
-          (p.product_recommendations as Array<{ name: string; brand: string; usage: string; price: number; essential: boolean }>).map((prod, i) => (
+          (p.product_recommendations as Array<{ name: string; brand: string; usage: string; price: number; essential: boolean }>).map((prod, _i) => (
             <div key={prod.name} style={{ padding: '14px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 600, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 8 }}>

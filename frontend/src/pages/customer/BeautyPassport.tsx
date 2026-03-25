@@ -2,15 +2,15 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
-  Eye, Sparkles, Droplets, Sun, Wind, Shield, Heart,
+  Eye, Sparkles, Droplets, Sun, Wind, Shield,
   Scissors, BookOpen, Clock, Activity, AlertTriangle,
-  Star, Coffee, Utensils, Dumbbell, Smile
+  Star, Coffee, Smile
 } from 'lucide-react';
 import api from '../../config/api';
 import BeautyScoreRing from '../../components/BeautyScoreRing';
 import ArchetypeBadge from '../../components/ArchetypeBadge';
 import { ARCH_DATA } from '../../constants/archetypes';
-import type { Archetype, CustomerProfile } from '../../types';
+import type { CustomerProfile } from '../../types';
 
 type TabKey = 'overview' | 'hair' | 'skin' | 'lifestyle' | 'safety' | 'soul' | 'history';
 

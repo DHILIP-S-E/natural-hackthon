@@ -13,7 +13,7 @@ export default function FranchiseDashboard() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: overview } = useQuery({
+  const { data: _overview } = useQuery({
     queryKey: ['analytics', 'overview'],
     queryFn: () => api.get('/analytics/overview').then(r => r.data?.data),
     staleTime: 5 * 60 * 1000,

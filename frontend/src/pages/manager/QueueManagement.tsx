@@ -1,7 +1,6 @@
-import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Users2, Clock, UserCheck, Play, CheckCircle, PhoneOff, Plus, Bell, ArrowUpRight, Sparkles } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Users2, Clock, UserCheck, Play, CheckCircle, Plus, Bell } from 'lucide-react';
 import ArchetypeBadge from '../../components/ArchetypeBadge';
 import api from '../../config/api';
 

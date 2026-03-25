@@ -2,9 +2,8 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Calendar, Clock, User, CheckCircle, Play, Pause, SkipForward,
-  AlertTriangle, Sparkles, Star, BookOpen, Timer, ChevronRight,
-  Thermometer, Beaker, Droplets, Heart
+  Calendar, Clock, CheckCircle, Play, Pause,
+  AlertTriangle, Sparkles, Star, BookOpen, Timer, ChevronRight
 } from 'lucide-react';
 import ArchetypeBadge from '../../components/ArchetypeBadge';
 import api from '../../config/api';

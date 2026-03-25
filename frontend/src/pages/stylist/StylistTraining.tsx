@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
-  BookOpen, Award, Download, ChevronRight, Clock, Star, CheckCircle,
-  Lock, Sparkles, Target, Activity, Trophy, Users
+  BookOpen, Award, Download, Clock, Star, CheckCircle,
+  Lock, Sparkles, Target, Activity, Trophy
 } from 'lucide-react';
 import api from '../../config/api';
 
@@ -24,7 +24,7 @@ interface TrainingModule {
 }
 
 const LEVEL_COLORS: Record<SkillLevel, string> = { L1: 'var(--teal)', L2: 'var(--gold)', L3: '#f44f9a' };
-const LEVEL_LABELS: Record<SkillLevel, string> = { L1: 'Foundation', L2: 'Advanced', L3: 'Expert' };
+
 
 export default function StylistTraining() {
   const [showAllCompleted, setShowAllCompleted] = useState(false);

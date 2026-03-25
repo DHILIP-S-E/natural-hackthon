@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Sparkles, Heart, Calendar, BookOpen, Award, TrendingUp, Sun, Droplets, Wind, Eye, Star, Shield } from 'lucide-react';
@@ -265,7 +265,7 @@ export default function CustomerDashboard() {
                 <div>
                   <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: 6 }}>Known Allergies</div>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    {CUSTOMER.allergies.map(a => <span key={a} className="badge badge-rose" style={{ fontWeight: 600 }}>{a}</span>)}
+                    {CUSTOMER.allergies.map((a: string) => <span key={a} className="badge badge-rose" style={{ fontWeight: 600 }}>{a}</span>)}
                   </div>
                 </div>
                 <div style={{ marginTop: 16 }}>

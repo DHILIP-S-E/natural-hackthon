@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Calendar, Clock, MapPin, Scissors, Star, ChevronRight, Filter, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
+import { Calendar, Clock, MapPin, Scissors, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
 import ArchetypeBadge from '../../components/ArchetypeBadge';
 import api from '../../config/api';
 

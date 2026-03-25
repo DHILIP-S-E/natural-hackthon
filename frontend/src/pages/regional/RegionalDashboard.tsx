@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Map, DollarSign, Users, Star, TrendingUp, Building, BarChart3 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
+import { Map, DollarSign, Users, Star, Building } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import api from '../../config/api';
 
 const tooltipStyle = { backgroundColor: '#16161E', border: '1px solid #252530', borderRadius: '8px', fontSize: '0.75rem' };
@@ -31,8 +31,6 @@ export default function RegionalDashboard() {
   const totalLocations = locations.length || 0;
   const totalStaff = staffData?.total_staff || overview?.total_staff || 0;
   const avgQuality = overview?.avg_quality_score ? (overview.avg_quality_score / 20).toFixed(1) : '0';
-  const totalCustomers = overview?.total_customers || 0;
-
   const revenueByRegion = regions.length > 0
     ? regions.map((r: any) => ({ region: r.name || r.region || 'Unknown', revenue: ((r.revenue ?? 0) / 100000) }))
     : locations.map((l: any) => ({ region: (l.name ?? '').substring(0, 12) || 'Unknown', revenue: ((l.revenue ?? 0) / 100000) }));

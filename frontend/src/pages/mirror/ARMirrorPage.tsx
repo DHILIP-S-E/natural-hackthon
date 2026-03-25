@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Palette, Camera, Scissors, Sparkles, RotateCcw, Heart, Share2, BookmarkPlus, ChevronRight, Activity } from 'lucide-react';
+import { Palette, Camera, Scissors, Sparkles, RotateCcw, Share2, BookmarkPlus, ChevronRight } from 'lucide-react';
 import api from '../../config/api';
 
 export default function ARMirrorPage() {
@@ -9,7 +9,7 @@ export default function ARMirrorPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [saved, setSaved] = useState<string[]>([]);
 
-  const { data: mirrorData, isLoading } = useQuery({
+  const { data: mirrorData, isLoading: _isLoading } = useQuery({
     queryKey: ['mirror-styles'],
     queryFn: () => api.get('/mirror/styles').then(r => r.data?.data),
     retry: false,

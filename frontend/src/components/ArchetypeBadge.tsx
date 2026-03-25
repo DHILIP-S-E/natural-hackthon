@@ -1,4 +1,4 @@
-import type { Archetype, ArchetypeInfo } from '../types';
+import type { Archetype } from '../types';
 import { ARCHETYPES } from '../types';
 
 interface Props {

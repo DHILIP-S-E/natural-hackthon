@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Brain, Sparkles, ScanFace, User, Scissors, TrendingUp, Users, BarChart3, Activity, Cpu } from 'lucide-react';
+import { Brain, Sparkles, ScanFace, User, Scissors, TrendingUp, Users, BarChart3, Cpu } from 'lucide-react';
 import { TiltCard } from '../../components/ui/TiltCard';
 import api from '../../config/api';
 

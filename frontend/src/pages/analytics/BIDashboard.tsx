@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { BarChart3, DollarSign, TrendingUp, Users, Star, ArrowUpRight, ArrowDownRight, Sparkles, GitCompare } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import api from '../../config/api';
 
 const tooltipStyle = { backgroundColor: '#16161E', border: '1px solid #252530', borderRadius: '8px', fontSize: '0.75rem' };
@@ -24,7 +24,7 @@ export default function BIDashboard() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: quality } = useQuery({
+  const { data: _quality } = useQuery({
     queryKey: ['analytics', 'quality', 30],
     queryFn: () => api.get('/analytics/quality?days=30').then(r => r.data?.data),
     staleTime: 5 * 60 * 1000,
@@ -80,7 +80,6 @@ export default function BIDashboard() {
       }))
     : [];
 
-  const growthTrend = forecast?.trend || 'stable';
   const growthRate = forecast?.growth_rate || 0;
 
   return (

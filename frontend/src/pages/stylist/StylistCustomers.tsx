@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
-  Search, AlertTriangle, Calendar, Star, ChevronRight, Users, Activity
+  Search, AlertTriangle, Calendar, ChevronRight, Users, Activity
 } from 'lucide-react';
 import api from '../../config/api';
 import BeautyScoreRing from '../../components/BeautyScoreRing';
@@ -47,9 +47,9 @@ export default function StylistCustomers() {
 
   const list = customers ?? [];
 
-  const filtered = list.filter(c =>
+  const filtered = list.filter((c: any) =>
     (c.name ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (c.topServices ?? []).some(s => (s ?? '').toLowerCase().includes(searchQuery.toLowerCase()))
+    (c.topServices ?? []).some((s: any) => (s ?? '').toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   if (isLoading) {
@@ -71,7 +71,7 @@ export default function StylistCustomers() {
           <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Stylist</p>
           <h1 style={{ fontSize: '1.75rem', fontWeight: 700 }}>My Customers</h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: 4 }}>
-            {list.length} assigned customers &middot; {list.filter(c => c.allergies.length > 0).length} with allergy alerts
+            {list.length} assigned customers &middot; {list.filter((c: any) => c.allergies.length > 0).length} with allergy alerts
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -106,7 +106,7 @@ export default function StylistCustomers() {
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 'var(--space-md)' }}>
-          {filtered.map((customer, i) => {
+          {filtered.map((customer: any, i: any) => {
             const archData2 = customer.dominantArchetype ? ARCH_DATA[customer.dominantArchetype] : null;
             const ArchIcon = archData2?.icon;
             return (
@@ -149,7 +149,7 @@ export default function StylistCustomers() {
 
                     {/* Service tags */}
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-                      {customer.topServices.map(s => (
+                      {customer.topServices.map((s: any) => (
                         <span key={s} className="badge badge-teal" style={{ fontSize: '0.65rem', padding: '2px 6px' }}>{s}</span>
                       ))}
                     </div>
