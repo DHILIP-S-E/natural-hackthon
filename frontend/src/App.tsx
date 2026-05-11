@@ -9,6 +9,7 @@ import { lazy, Suspense } from 'react';
 import LandingPage from './pages/public/LandingPage';
 import LoginPage from './pages/public/LoginPage';
 import RegisterPage from './pages/public/RegisterPage';
+import SalonMapPage from './pages/public/SalonMapPage';
 
 // Lazy-loaded pages
 const ManagerDashboard = lazy(() => import('./pages/manager/ManagerDashboard'));
@@ -53,8 +54,22 @@ const RBACPage = lazy(() => import('./pages/admin/RBACPage'));
 
 const AlertsHubPage = lazy(() => import('./pages/manager/AlertsHubPage'));
 const LocationSettingsPage = lazy(() => import('./pages/manager/LocationSettingsPage'));
+const EcoTracker = lazy(() => import('./pages/manager/EcoTracker'));
+const InventoryForecast = lazy(() => import('./pages/manager/InventoryForecast'));
 
 const CustomerProfilePage = lazy(() => import('./pages/customer/CustomerProfilePage'));
+const SkinToneBot = lazy(() => import('./pages/customer/SkinToneBot'));
+
+const VoiceAssistant = lazy(() => import('./pages/stylist/VoiceAssistant'));
+const AuraScoreDashboard = lazy(() => import('./pages/stylist/AuraScoreDashboard'));
+const FranchisePerformanceDashboard = lazy(() => import('./pages/franchise/FranchisePerformanceDashboard'));
+
+const NetworkLeaderboard = lazy(() => import('./pages/shared/NetworkLeaderboard'));
+
+const ConsultationForm = lazy(() => import('./pages/public/ConsultationForm'));
+const WaitTimeDisplay = lazy(() => import('./pages/public/WaitTimeDisplay'));
+
+const BeautyTwinTimeline = lazy(() => import('./pages/customer/BeautyTwinTimeline'));
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
@@ -74,10 +89,14 @@ export default function App() {
       <BrowserRouter>
         <Suspense fallback={<PageLoader />}>
           <Routes>
-            {/* Public routes */}
+            {/* Public routes — no login needed */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/salons" element={<SalonMapPage />} />
+            <Route path="/find-salon" element={<SalonMapPage />} />
+            <Route path="/consult/:bookingId" element={<ConsultationForm />} />
+            <Route path="/wait/:locationId" element={<WaitTimeDisplay />} />
 
             {/* Customer routes */}
             <Route element={<ProtectedRoute allowedRoles={['customer']}><DashboardLayout /></ProtectedRoute>}>
@@ -91,6 +110,8 @@ export default function App() {
               <Route path="/app/journey" element={<BeautyJourney />} />
               <Route path="/app/homecare" element={<HomecarePage />} />
               <Route path="/app/profile" element={<CustomerProfilePage />} />
+              <Route path="/app/skin-tone" element={<SkinToneBot />} />
+              <Route path="/app/twin" element={<BeautyTwinTimeline />} />
             </Route>
 
             {/* Stylist routes */}
@@ -102,6 +123,8 @@ export default function App() {
               <Route path="/stylist/customers/:id" element={<StylistCustomers />} />
               <Route path="/stylist/performance" element={<StylistPerformance />} />
               <Route path="/stylist/training" element={<StylistTraining />} />
+              <Route path="/stylist/voice" element={<VoiceAssistant />} />
+              <Route path="/stylist/aurascore" element={<AuraScoreDashboard />} />
             </Route>
 
             {/* Salon Manager routes */}
@@ -123,6 +146,10 @@ export default function App() {
               <Route path="/manager/feedback" element={<FeedbackPage />} />
               <Route path="/manager/alerts" element={<AlertsHubPage />} />
               <Route path="/manager/settings" element={<LocationSettingsPage />} />
+              <Route path="/manager/eco" element={<EcoTracker />} />
+              <Route path="/manager/inventory" element={<InventoryForecast />} />
+              <Route path="/manager/leaderboard" element={<NetworkLeaderboard />} />
+              <Route path="/manager/aurascore" element={<AuraScoreDashboard />} />
             </Route>
 
             {/* Franchise Owner routes */}
@@ -135,6 +162,7 @@ export default function App() {
               <Route path="/franchise/staff" element={<TeamManagement />} />
               <Route path="/franchise/compare" element={<CompareLocationsPage />} />
               <Route path="/franchise/reports" element={<BIDashboard />} />
+              <Route path="/franchise/performance" element={<FranchisePerformanceDashboard />} />
             </Route>
 
             {/* Regional Manager routes */}
@@ -165,7 +193,12 @@ export default function App() {
               <Route path="/admin/ai" element={<AIEnginePage />} />
               <Route path="/admin/soulskin" element={<SoulskinAnalytics />} />
               <Route path="/admin/bi" element={<BIDashboard />} />
-              <Route path="/admin/training" element={<PlaceholderDashboard title="Admin: Training" subtitle="Network-wide Training intelligence across all locations." />} />
+              <Route path="/admin/training" element={<NetworkLeaderboard />} />
+              <Route path="/admin/leaderboard" element={<NetworkLeaderboard />} />
+              <Route path="/admin/inventory" element={<InventoryForecast />} />
+              <Route path="/admin/eco" element={<EcoTracker />} />
+              <Route path="/admin/aurascore" element={<AuraScoreDashboard />} />
+              <Route path="/admin/performance" element={<FranchisePerformanceDashboard />} />
               <Route path="/admin/config" element={<SystemConfigPage />} />
               <Route path="/admin/rbac" element={<RBACPage />} />
             </Route>

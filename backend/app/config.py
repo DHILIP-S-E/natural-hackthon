@@ -54,6 +54,16 @@ class Settings(BaseSettings):
     OPENWEATHER_API_KEY: str = ""
     OPENWEATHER_BASE_URL: str = "https://api.openweathermap.org/data/2.5"
 
+    # AWS (SNS for WhatsApp + push, S3 for storage)
+    AWS_ACCESS_KEY_ID: str = ""
+    AWS_SECRET_ACCESS_KEY: str = ""
+    AWS_REGION: str = "ap-south-1"
+    AWS_SNS_WHATSAPP_SENDER_ID: str = ""   # E.164 sender number from AWS
+    AWS_SNS_PLATFORM_ARN: str = ""          # FCM/APNS platform application ARN
+
+    # Google Maps (Feature 3: Smart Salon Map)
+    GOOGLE_MAPS_API_KEY: str = ""
+
     # SMTP Email (works with Gmail, Outlook, any SMTP server)
     SMTP_HOST: str = ""           # e.g. "smtp.gmail.com"
     SMTP_PORT: int = 587          # 587 for TLS, 465 for SSL

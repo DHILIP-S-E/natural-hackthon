@@ -95,6 +95,10 @@ class CustomerProfile(Base, TimestampMixin):
     # Occasion-based planning (PS-03.10)
     occasion_plans: Mapped[dict | None] = mapped_column(JSON)
 
+    # ══ FEATURE 4: STYLIST FINDER PREFERENCES ══
+    show_alternative_stylists: Mapped[bool] = mapped_column(Boolean, default=True)
+    cancellation_alert_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+
     # AI profile embedding (pgvector in PostgreSQL, JSON list in SQLite)
     profile_embedding: Mapped[list | None] = mapped_column(JSON, nullable=True)
 

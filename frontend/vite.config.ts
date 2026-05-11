@@ -26,12 +26,65 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // Background sync queue for offline writes
+        backgroundSync: {
+          name: 'aura-write-queue',
+          options: { maxRetentionTime: 24 * 60 }, // 24 hours
+        },
         runtimeCaching: [
+          // Critical read-only data — CacheFirst, longer TTL
+          {
+            urlPattern: /\/api\/v1\/(sops|services|locations)\b/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'aura-static-data',
+              expiration: { maxEntries: 100, maxAgeSeconds: 3600 }, // 1 hour
+            },
+          },
+          // Today's bookings + customer profiles — NetworkFirst, short TTL
+          {
+            urlPattern: /\/api\/v1\/(bookings|customers|sessions|queue)\b/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'aura-live-data',
+              expiration: { maxEntries: 200, maxAgeSeconds: 300 }, // 5 min
+              networkTimeoutSeconds: 4,
+            },
+          },
+          // Beauty Passport + consultation data — NetworkFirst
+          {
+            urlPattern: /\/api\/v1\/(customers\/.*\/passport|consultation|allergy|twin)\b/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'aura-passport-data',
+              expiration: { maxEntries: 100, maxAgeSeconds: 600 }, // 10 min
+              networkTimeoutSeconds: 4,
+            },
+          },
+          // All other API calls — NetworkFirst, 5 min cache
           {
             urlPattern: /\/api\/v1\//i,
             handler: 'NetworkFirst',
             options: {
-              cacheName: 'api-cache',
+              cacheName: 'aura-api-cache',
+              expiration: { maxEntries: 100, maxAgeSeconds: 300 },
+              networkTimeoutSeconds: 6,
+            },
+          },
+          // Google Fonts + Maps tiles — CacheFirst
+          {
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\//i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts',
+              expiration: { maxEntries: 20, maxAgeSeconds: 86400 },
+            },
+          },
+          {
+            urlPattern: /^https:\/\/maps\.googleapis\.com\//i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'google-maps',
               expiration: { maxEntries: 50, maxAgeSeconds: 300 },
             },
           },

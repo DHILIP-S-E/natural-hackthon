@@ -24,6 +24,8 @@ from app.routers import (
     auth, locations, staff, customers, bookings, soulskin, services, analytics,
     sessions, queue, trends, climate, feedback, notifications, homecare,
     mood, twin, mirror, journey, sops, quality, training, roles,
+    skintone, eco, voice, aurascore, upsell, consultation, chatbot, waittime,
+    allergy, twin_timeline, franchise_dashboard,
 )
 
 # ── Import all agent modules to trigger registration ──
@@ -101,6 +103,17 @@ app.include_router(sops.router, prefix=API)
 app.include_router(quality.router, prefix=API)
 app.include_router(training.router, prefix=API)
 app.include_router(roles.router, prefix=API)
+app.include_router(skintone.router, prefix=API)
+app.include_router(eco.router, prefix=API)
+app.include_router(voice.router, prefix=API)
+app.include_router(aurascore.router, prefix=API)
+app.include_router(upsell.router, prefix=API)
+app.include_router(consultation.router, prefix=API)
+app.include_router(chatbot.router, prefix=API)
+app.include_router(waittime.router, prefix=API)
+app.include_router(allergy.router, prefix=API)
+app.include_router(twin_timeline.router, prefix=API)
+app.include_router(franchise_dashboard.router, prefix=API)
 
 # ── Register all 63 agent endpoints ──
 agent_router = APIRouter(prefix="/agents", tags=["AI Agents"])

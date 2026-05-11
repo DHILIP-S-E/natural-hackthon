@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useInView, useMotionValue, useSpring } from 'framer-motion';
+import ChatbotWidget from '../shared/ChatbotWidget';
 import { Brain, TrendingUp, Eye, Heart, Zap, Palette, Users, BarChart3, ArrowRight, Shield, Wifi, Sparkles } from 'lucide-react';
 
 /* ────────────────────────────────────────────────
@@ -348,6 +349,9 @@ export default function LandingPage() {
           AURA v2.0 — Naturals BeautyTech Hackathon 2026
         </p>
       </footer>
+
+      {/* AURA Chat — floating on landing page */}
+      <ChatbotWidget />
     </div>
   );
 }

@@ -327,6 +327,93 @@ async def get_booking(
     })
 
 
+@router.get("/{booking_id}/allergy-check", response_model=APIResponse)
+async def allergy_check(
+    booking_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Feature 1 — Dual Allergy Safety Gate.
+
+    Call this endpoint:
+    1. When booking is confirmed (show popup to booking staff/customer)
+    2. When stylist opens the live session (mandatory pre-service gate)
+
+    Returns allergy alert if the customer has known allergies.
+    For chemical services (colour, keratin, bleach, perm), alert is MANDATORY.
+    """
+    from app.models.customer import CustomerProfile
+    from app.models.service import Service
+
+    result = await db.execute(select(Booking).where(Booking.id == booking_id))
+    booking = result.scalar_one_or_none()
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+
+    cp_result = await db.execute(
+        select(CustomerProfile).where(CustomerProfile.id == booking.customer_id)
+    )
+    cp = cp_result.scalar_one_or_none()
+
+    allergies = []
+    sensitivities = []
+    patch_test_info = None
+    if cp:
+        allergies = cp.known_allergies or []
+        sensitivities = cp.product_sensitivities or []
+        if cp.patch_tested_on:
+            patch_test_info = {
+                "tested_on": str(cp.patch_tested_on),
+                "result": cp.patch_test_result or "unknown",
+            }
+
+    # Check if this is a chemical service
+    svc = None
+    is_chemical_service = False
+    if booking.service_id:
+        svc_result = await db.execute(select(Service).where(Service.id == booking.service_id))
+        svc = svc_result.scalar_one_or_none()
+        if svc:
+            chemical_keywords = ["colour", "color", "keratin", "bleach", "perm", "relaxer",
+                                  "straighten", "highlight", "chemical", "toner"]
+            service_lower = (svc.name or "").lower()
+            is_chemical_service = any(kw in service_lower for kw in chemical_keywords)
+
+    has_allergy_risk = bool(allergies or sensitivities)
+    alert_level = "none"
+    if has_allergy_risk and is_chemical_service:
+        alert_level = "mandatory"  # Must acknowledge before proceeding
+    elif has_allergy_risk:
+        alert_level = "caution"    # Show but can proceed
+
+    return APIResponse(
+        success=True,
+        message="Allergy check complete",
+        data={
+            "booking_id": booking_id,
+            "customer_id": booking.customer_id,
+            "service_name": svc.name if svc else None,
+            "is_chemical_service": is_chemical_service,
+            "known_allergies": allergies,
+            "product_sensitivities": sensitivities,
+            "patch_test": patch_test_info,
+            "has_allergy_risk": has_allergy_risk,
+            "alert_level": alert_level,
+            "alert_message": (
+                f"⚠️ ALLERGY ALERT: This customer has known allergies to: "
+                f"{', '.join(allergies)}. Patch test required before proceeding with chemical service."
+                if alert_level == "mandatory"
+                else (
+                    f"Caution: Customer has sensitivities: {', '.join(sensitivities or allergies)}. "
+                    "Verify products before use."
+                    if alert_level == "caution"
+                    else None
+                )
+            ),
+        },
+    )
+
+
 @router.post("/{booking_id}/check-in", response_model=APIResponse)
 async def checkin_booking(
     booking_id: str,
