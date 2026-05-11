@@ -116,10 +116,14 @@ export default function LiveSession() {
   }, []);
 
   const submitDeviation = useCallback(() => {
-    // In production, this would call api.post('/sessions/{id}/deviations', ...)
+    if (session.booking_id && deviationNote.trim()) {
+      api.post(`/sessions/${session.booking_id}/deviation`, null, {
+        params: { step: currentStep, reason: deviationNote.trim() },
+      }).catch(() => {});
+    }
     setDeviationNote('');
     setShowDeviationModal(false);
-  }, []);
+  }, [session.booking_id, currentStep, deviationNote]);
 
   if (!step || totalSteps === 0) {
     return (

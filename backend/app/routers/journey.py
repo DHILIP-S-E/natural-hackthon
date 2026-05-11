@@ -145,7 +145,6 @@ async def get_active_journey(customer_id: str, db: AsyncSession = Depends(get_db
     plan = result.scalar_one_or_none()
     if not plan:
         return APIResponse(success=True, data=None, message="No journey plan found")
-    print(f"[DEBUG_JOURNEY] Plan ID {plan.id} has products: {getattr(plan, 'recommended_products', None)}")
     return APIResponse(success=True, data={
         "id": str(plan.id), "customer_id": plan.customer_id,
         "plan_duration_weeks": plan.plan_duration_weeks,

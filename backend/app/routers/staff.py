@@ -179,6 +179,72 @@ async def delete_staff(
     return APIResponse(success=True, message="Staff profile deleted")
 
 
+@router.get("/me/performance", response_model=APIResponse)
+async def my_performance(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get performance metrics for the currently authenticated stylist."""
+    result = await db.execute(select(StaffProfile).where(StaffProfile.user_id == current_user.id))
+    staff = result.scalar_one_or_none()
+    if not staff:
+        raise HTTPException(status_code=404, detail="Staff profile not found")
+    return await staff_performance(staff.id, current_user, db)
+
+
+@router.get("/me/training", response_model=APIResponse)
+async def my_training(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get training modules and learning path for the currently authenticated stylist."""
+    from app.models.training import TrainingRecord
+    result = await db.execute(select(StaffProfile).where(StaffProfile.user_id == current_user.id))
+    staff = result.scalar_one_or_none()
+    if not staff:
+        raise HTTPException(status_code=404, detail="Staff profile not found")
+
+    completed_result = await db.execute(
+        select(TrainingRecord)
+        .where(TrainingRecord.staff_id == staff.id, TrainingRecord.completed == True)
+        .order_by(TrainingRecord.completed_at.desc())
+    )
+    completed = completed_result.scalars().all()
+
+    available_result = await db.execute(
+        select(TrainingRecord)
+        .where(TrainingRecord.staff_id == staff.id, TrainingRecord.completed == False)
+    )
+    available = available_result.scalars().all()
+
+    skill_val = enum_val(staff.skill_level) if staff.skill_level else "L1"
+    level_order = ["L1", "L2", "L3", "Master"]
+    current_idx = level_order.index(skill_val) if skill_val in level_order else 0
+    learning_path = [
+        {"level": lvl, "label": ["Foundation", "Advanced", "Expert", "Master"][i],
+         "modules": 5, "completed": 5 if i < current_idx else (len(completed) if i == current_idx else 0)}
+        for i, lvl in enumerate(level_order)
+    ]
+
+    return APIResponse(success=True, data={
+        "stylist_name": f"{current_user.first_name} {current_user.last_name}",
+        "current_level": skill_val,
+        "soulskin_score": float(staff.soulskin_score) if getattr(staff, "soulskin_score", None) else None,
+        "learning_path": learning_path,
+        "completed": [
+            {"id": str(t.id), "module_name": t.module_name, "duration_hours": t.duration_hours or 1,
+             "score": float(t.score) if t.score else None, "completed_at": str(t.completed_at) if t.completed_at else None,
+             "includes_soulskin": getattr(t, "includes_soulskin", False)}
+            for t in completed
+        ],
+        "available": [
+            {"id": str(t.id), "module_name": t.module_name, "duration_hours": t.duration_hours or 1,
+             "score": None, "completed_at": None, "includes_soulskin": getattr(t, "includes_soulskin", False)}
+            for t in available
+        ],
+    })
+
+
 @router.get("/{staff_id}/performance", response_model=APIResponse)
 async def staff_performance(
     staff_id: str,

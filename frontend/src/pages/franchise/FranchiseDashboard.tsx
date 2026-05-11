@@ -36,7 +36,7 @@ export default function FranchiseDashboard() {
     location: l.name?.substring(0, 12) || 'Unknown',
     revenue: Math.round((l.revenue || 0) / 100000 * 10) / 10,
     quality: l.avg_quality || 0,
-    retention: 0,
+    retention: l.retention_rate ?? l.retention ?? null,
   }));
 
   return (

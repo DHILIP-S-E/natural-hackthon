@@ -289,8 +289,8 @@ async def reset_password(email: str, otp: str, new_password: str, db: AsyncSessi
         raise HTTPException(status_code=400, detail="Invalid or expired OTP")
 
     user.password_hash = hash_password(new_password)
-    user.push_token = None  # Clear OTP
-
+    user.push_token = None
+    await db.commit()
     return APIResponse(success=True, message="Password reset successfully")
 
 
@@ -303,7 +303,10 @@ async def send_otp(phone: str, db: AsyncSession = Depends(get_db)):
     if not user:
         return APIResponse(success=True, message="If the phone exists, an OTP has been sent")
 
+    import hashlib
     otp = str(secrets.randbelow(900000) + 100000)
+    otp_hash = hashlib.sha256(otp.encode()).hexdigest()
+    user.push_token = f"phone_otp:{otp_hash}"
 
     # Send OTP via email (SMTP) since no Twilio
     from app.services.email_service import send_otp_email
@@ -311,6 +314,7 @@ async def send_otp(phone: str, db: AsyncSession = Depends(get_db)):
     if user.email:
         email_sent = await send_otp_email(user.email, otp, "phone verification")
 
+    await db.commit()
     return APIResponse(
         success=True,
         data={"_demo_otp": otp} if not email_sent else None,
@@ -321,13 +325,19 @@ async def send_otp(phone: str, db: AsyncSession = Depends(get_db)):
 @router.post("/verify-otp", response_model=APIResponse)
 async def verify_otp(phone: str, otp: str, db: AsyncSession = Depends(get_db)):
     """Verify phone OTP and mark user as verified."""
+    import hashlib
     result = await db.execute(select(User).where(User.phone == phone))
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=400, detail="Invalid request")
 
-    # In production: verify against stored hash in Redis
+    otp_hash = hashlib.sha256(otp.encode()).hexdigest()
+    if not user.push_token or user.push_token != f"phone_otp:{otp_hash}":
+        raise HTTPException(status_code=400, detail="Invalid or expired OTP")
+
     user.is_verified = True
+    user.push_token = None
+    await db.commit()
     return APIResponse(success=True, message="Phone verified successfully")
 
 

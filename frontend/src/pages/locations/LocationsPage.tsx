@@ -54,7 +54,7 @@ export default function LocationsPage({ scope }: LocationsPageProps) {
 
   const totalRevenue = list.reduce((s, l) => s + (Number(l.revenue) || 0), 0);
   const avgQuality = list.length > 0 ? (list.reduce((s, l) => s + (Number(l.quality_score) || 0), 0) / list.length).toFixed(1) : '0';
-  const totalStaff = list.length * 4; // estimated
+  const totalStaff = list.reduce((s, l: any) => s + (Number(l.staff_count) || 0), 0);
 
   const kpis = [
     { label: 'Total Locations', value: list.length.toString(), icon: Building, color: 'var(--teal)' },

@@ -30,7 +30,7 @@ async def _resolve_customer_id(customer_id: str, db: AsyncSession, user: User) -
         result = await db.execute(
             select(CustomerProfile.id).where(CustomerProfile.user_id == user.id)
         )
-        return str(result.scalar_one_or_none())
+        return result.scalar_one_or_none()
     return customer_id
 
 

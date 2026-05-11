@@ -65,10 +65,29 @@ _MAKEUP_LOOKS = [
 ]
 
 @router.get("/styles", response_model=APIResponse)
-async def get_styles(user=Depends(get_current_user)):
-    """Return the catalogue of hairstyles, hair colours and makeup looks."""
+async def get_styles(db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
+    """Return the catalogue of hairstyles and makeup looks, with trending flags from live TrendSignals."""
+    from app.models.trend import TrendSignal
+    from sqlalchemy import select
+
+    # Fetch active high-signal trends to mark styles as trending
+    trend_result = await db.execute(
+        select(TrendSignal.service_category, TrendSignal.overall_signal_strength)
+        .where(TrendSignal.is_active == True, TrendSignal.overall_signal_strength >= 5.0)
+    )
+    trending_categories = {row.service_category.lower() for row in trend_result.all() if row.service_category}
+
+    def is_trending(name: str) -> bool:
+        name_lower = name.lower()
+        return any(cat in name_lower or name_lower in cat for cat in trending_categories) if trending_categories else False
+
+    hairstyles = [
+        {**s, "trending": is_trending(s["name"]) if trending_categories else s["trending"]}
+        for s in _HAIRSTYLES
+    ]
+
     return APIResponse(success=True, data={
-        "hairstyles": _HAIRSTYLES,
+        "hairstyles": hairstyles,
         "makeup_looks": _MAKEUP_LOOKS,
     })
 

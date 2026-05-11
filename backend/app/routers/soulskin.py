@@ -143,9 +143,17 @@ async def generate_soul_reading(
                 if "skin_type" in diagnostics: cp2.skin_type = diagnostics["skin_type"]
                 if "stress_level" in diagnostics: cp2.stress_level = diagnostics["stress_level"]
                 if "diet_type" in diagnostics: cp2.diet_type = diagnostics["diet_type"]
-                # Also estimate beauty score if missing
+                # Compute a beauty score from available diagnostics if not yet set
                 if not cp2.beauty_score:
-                    cp2.beauty_score = 75 # Initial baseline
+                    score = 60  # base
+                    if cp2.skin_type: score += 5
+                    if cp2.hair_type: score += 5
+                    acne = cp2.acne_severity or 5
+                    pigment = cp2.pigmentation_level or 5
+                    score += max(0, 10 - acne) + max(0, 10 - pigment)
+                    if cp2.spf_usage in ("daily", "always"): score += 3
+                    if cp2.sleep_quality in ("good", "excellent"): score += 3
+                    cp2.beauty_score = min(100, score)
 
     await db.commit()
     return APIResponse(

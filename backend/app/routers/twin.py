@@ -83,12 +83,37 @@ async def simulate_future(customer_id: UUID, weeks_ahead: int = 12,
     twin = result.scalar_one_or_none()
     if not twin:
         raise HTTPException(404, "Digital twin not found")
+    from app.models.customer import CustomerProfile
+    cp_result = await db.execute(
+        select(CustomerProfile).where(CustomerProfile.id == str(customer_id))
+    )
+    cp = cp_result.scalar_one_or_none()
+
+    # Derive baseline from customer profile diagnostics
+    current_skin = float(getattr(cp, "beauty_score", None) or 65)
+    current_acne = int(getattr(cp, "acne_severity", None) or 3)
+    current_pigmentation = int(getattr(cp, "pigmentation_level", None) or 3)
+
+    # Projected improvement: +0.4 skin score/week, acne/pigmentation reduce by 1 per 8 weeks
+    predicted_skin = round(min(100.0, current_skin + weeks_ahead * 0.4), 1)
+    predicted_acne = max(0, current_acne - (weeks_ahead // 8))
+    predicted_pigmentation = max(0, current_pigmentation - (weeks_ahead // 8))
+
     simulations = twin.future_simulations or []
     simulations.append({
         "simulation_id": f"sim_{len(simulations)+1:03d}",
         "simulated_at": datetime.now(timezone.utc).isoformat(),
         "weeks_ahead": weeks_ahead,
-        "predicted_state": {"skin_score": 80, "acne_level": 1, "pigmentation_level": 1},
+        "predicted_state": {
+            "skin_score": predicted_skin,
+            "acne_level": predicted_acne,
+            "pigmentation_level": predicted_pigmentation,
+        },
+        "baseline": {
+            "skin_score": current_skin,
+            "acne_level": current_acne,
+            "pigmentation_level": current_pigmentation,
+        },
     })
     twin.future_simulations = simulations
     await db.commit()

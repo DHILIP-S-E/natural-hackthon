@@ -9,7 +9,8 @@
       "Bash(pip list:*)",
       "Bash(python:*)",
       "Bash(find \"C:\\\\github\\\\bgrowapp\\\\server\\\\actions\\\\admin\" -name \"*.ts\" -type f -exec grep -l \"middleware:\\\\s*\\\\[\\\\s*\\\\]\" {})",
-      "Bash(find \"C:\\\\github\\\\bgrowapp\\\\server\\\\actions\\\\public\" -name \"*.ts\" -type f -exec grep -l \"middleware:\\\\s*\\\\[\\\\s*\\\\]\" {})"
+      "Bash(find \"C:\\\\github\\\\bgrowapp\\\\server\\\\actions\\\\public\" -name \"*.ts\" -type f -exec grep -l \"middleware:\\\\s*\\\\[\\\\s*\\\\]\" {})",
+      "Bash(git -C /c/github/natural log --oneline)"
     ]
   }
 }

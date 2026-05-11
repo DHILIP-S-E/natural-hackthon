@@ -103,7 +103,8 @@ async def create_plan(
         ai_notes=f"{'AI-generated' if ai_result.get('_ai_generated') else 'Rule-based'} homecare plan.",
     )
     db.add(plan)
-    await db.flush()
+    await db.commit()
+    await db.refresh(plan)
     return APIResponse(success=True, data={"id": str(plan.id)}, message="Homecare plan created")
 
 

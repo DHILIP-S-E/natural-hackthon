@@ -43,7 +43,7 @@ export default function ManagerDashboard() {
 
   const { data: timeMonitor } = useQuery({
     queryKey: ['quality', 'time-monitor'],
-    queryFn: () => api.get('/quality/agents/time-monitor?location_id=L-001').then(r => r.data?.data), // Hardcoded Loc for demo
+    queryFn: () => api.get('/quality/agents/time-monitor').then(r => r.data?.data),
     refetchInterval: 30000,
   });
 
@@ -93,14 +93,19 @@ export default function ManagerDashboard() {
     alerts.push({ type: 'info', msg: 'No active alerts — normal conditions', severity: 'info' });
   }
 
+  // Count in-progress bookings from today's data
+  const inProgressCount = todayBookings.filter((b: any) => b.status === 'in_progress').length;
+
   // Build team data from staff API
   const team = (staffData?.staff || []).slice(0, 4).map((s: any) => ({
     name: s.name || 'Staff',
     role: s.skill_level || 'Stylist',
     completed: s.total_services || 0,
-    inProgress: 0,
+    inProgress: inProgressCount,
     rating: s.current_rating || 0,
     soulskin: s.soulskin_certified || false,
+    skillReadiness: s.proficiency_score ?? s.skill_readiness_pct ?? null,
+    upsellTip: s.upsell_suggestion || null,
   }));
 
   // SOULSKIN archetype distribution
@@ -236,26 +241,28 @@ export default function ManagerDashboard() {
                 <div className="badge badge-success" style={{ fontSize: '0.65rem' }}>Active</div>
               </div>
 
-              {/* Training Progress (Onboarding Agent proxy) */}
-              <div style={{ marginBottom: 16 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', marginBottom: 6 }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Skill Readiness (L2)</span>
-                  <span style={{ fontWeight: 600 }}>{70 + i * 5}%</span>
+              {/* Training Progress */}
+              {s.skillReadiness !== null && (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', marginBottom: 6 }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Skill Readiness ({s.role})</span>
+                    <span style={{ fontWeight: 600 }}>{s.skillReadiness}%</span>
+                  </div>
+                  <div style={{ height: 4, background: 'var(--bg-surface)', borderRadius: 2 }}>
+                    <div style={{ height: '100%', width: `${s.skillReadiness}%`, background: 'var(--teal)', borderRadius: 2 }} />
+                  </div>
                 </div>
-                <div style={{ height: 4, background: 'var(--bg-surface)', borderRadius: 2 }}>
-                  <div style={{ height: '100%', width: `${70 + i * 5}%`, background: 'var(--teal)', borderRadius: 2 }} />
-                </div>
-              </div>
+              )}
 
-              {/* AI Suggestion */}
-              <div style={{ padding: 12, background: 'rgba(155,127,212,0.06)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(155,127,212,0.1)' }}>
-                <div style={{ fontSize: '0.65rem', color: 'var(--violet)', fontWeight: 700, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <TrendingUp size={12} /> UPSELL OPPORTUNITY
+              {/* AI Upsell Suggestion */}
+              {s.upsellTip && (
+                <div style={{ padding: 12, background: 'rgba(155,127,212,0.06)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(155,127,212,0.1)' }}>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--violet)', fontWeight: 700, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <TrendingUp size={12} /> UPSELL OPPORTUNITY
+                  </div>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)' }}>{s.upsellTip}</div>
                 </div>
-                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  {i % 2 === 0 ? 'Recommend Soulskin Hydration for current guest.' : 'Bundle Scalp Detox with upcoming Hair Spa.'}
-                </div>
-              </div>
+              )}
             </div>
           ))}
         </div>

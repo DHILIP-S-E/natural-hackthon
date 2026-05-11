@@ -20,6 +20,10 @@ from app.models.homecare import HomecarePlan
 from app.models.training import TrainingRecord, TrainingType
 from app.models.notification import Notification, NotificationChannel, NotificationPriority
 from app.models.knowledge import KnowledgeBaseEntry
+from app.models.inventory import InventoryItem, InventoryUsageLog
+from app.models.campaign import Campaign, CompetitiveIntel, CelebrityTrendSource
+from app.models.scheduling import StaffSchedule, FloatRequest
+from app.models.recommendation import ServiceRecommendation
 
 __all__ = [
     # Models

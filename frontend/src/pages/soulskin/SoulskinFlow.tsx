@@ -84,10 +84,19 @@ export default function SoulskinFlow() {
   const [currentInput, setCurrentInput] = useState('');
   const [sessionId, setSessionId] = useState<string | null>(null);
 
-  // Mutation: create a SOULSKIN session
+  // Mutation: create a SOULSKIN session then patch answers
   const createSessionMutation = useMutation({
-    mutationFn: (data: { song: string; colour: string; word: string }) =>
-      api.post('/soulskin/sessions', data).then(r => r.data?.data),
+    mutationFn: async (data: { song: string; colour: string; word: string }) => {
+      const sessionRes = await api.post('/soulskin/sessions', {}).then(r => r.data?.data);
+      if (sessionRes?.id) {
+        await api.patch(`/soulskin/sessions/${sessionRes.id}`, {
+          question_1_song: data.song,
+          question_2_colour: data.colour,
+          question_3_word: data.word,
+        });
+      }
+      return sessionRes;
+    },
     onSuccess: (data) => {
       if (data?.id) setSessionId(data.id);
     },

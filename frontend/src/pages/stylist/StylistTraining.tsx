@@ -32,7 +32,7 @@ export default function StylistTraining() {
   const { data, isLoading } = useQuery({
     queryKey: ['stylist-training'],
     queryFn: async () => {
-      const res = await api.get('/stylists/me/training');
+      const res = await api.get('/staff/me/training');
       return res.data.data;
     },
     retry: false,

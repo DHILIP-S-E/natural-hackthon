@@ -104,15 +104,20 @@ async def franchise_bi_dashboard_handler(
             .order_by(func.sum(Booking.final_price).desc())
         )
         margin_by_category = []
-        for row in margin_result.all():
+        cat_rows = margin_result.all()
+        total_cat_revenue = sum(float(r.cat_revenue or 0) for r in cat_rows)
+        for row in cat_rows:
             cat_rev = float(row.cat_revenue or 0)
-            # Estimate margin at 60% for services (labor-based)
-            estimated_margin_pct = 60.0
+            # Allocate product cost proportionally across categories by revenue share
+            rev_share = cat_rev / total_cat_revenue if total_cat_revenue > 0 else 0
+            allocated_cost = total_product_cost * rev_share
+            gross_margin = cat_rev - allocated_cost
+            actual_margin_pct = round((gross_margin / cat_rev) * 100, 1) if cat_rev > 0 else 0.0
             margin_by_category.append({
                 "category": row.category or "Uncategorized",
                 "revenue": round(cat_rev, 2),
                 "bookings": row.cat_count,
-                "margin_pct": estimated_margin_pct,
+                "margin_pct": actual_margin_pct,
             })
 
         # Revenue per stylist hour

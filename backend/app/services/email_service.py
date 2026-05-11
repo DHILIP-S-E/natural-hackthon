@@ -44,7 +44,7 @@ def _send_smtp(to_email: str, subject: str, html_body: str, text_body: str = "")
 
 async def send_email(to_email: str, subject: str, html_body: str, text_body: str = "") -> bool:
     """Send email asynchronously via SMTP."""
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     return await loop.run_in_executor(None, _send_smtp, to_email, subject, html_body, text_body)
 
 

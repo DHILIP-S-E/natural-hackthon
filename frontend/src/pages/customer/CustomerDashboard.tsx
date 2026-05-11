@@ -122,7 +122,11 @@ export default function CustomerDashboard() {
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
           <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>MEMBER SINCE</div>
-          <div style={{ fontSize: '1.25rem', fontWeight: 700, fontFamily: 'var(--font-display)' }}>OCT 2024</div>
+          <div style={{ fontSize: '1.25rem', fontWeight: 700, fontFamily: 'var(--font-display)' }}>
+            {p?.created_at || user?.created_at
+              ? new Date(p?.created_at || user?.created_at).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }).toUpperCase()
+              : '—'}
+          </div>
         </div>
       </div>
 

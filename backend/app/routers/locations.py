@@ -60,6 +60,18 @@ async def list_locations(
     result = await db.execute(query)
     locations = result.scalars().all()
 
+    # Fetch staff counts in one query
+    from app.models.staff import StaffProfile
+    loc_ids = [loc.id for loc in locations]
+    staff_counts: dict[str, int] = {}
+    if loc_ids:
+        staff_count_result = await db.execute(
+            select(StaffProfile.location_id, func.count(StaffProfile.id))
+            .where(StaffProfile.location_id.in_(loc_ids), StaffProfile.is_available == True)
+            .group_by(StaffProfile.location_id)
+        )
+        staff_counts = {row[0]: row[1] for row in staff_count_result.all()}
+
     return APIResponse(
         success=True,
         data={
@@ -76,6 +88,7 @@ async def list_locations(
                     "is_active": loc.is_active,
                     "smart_mirror_enabled": loc.smart_mirror_enabled,
                     "soulskin_enabled": loc.soulskin_enabled,
+                    "staff_count": staff_counts.get(loc.id, 0),
                 }
                 for loc in locations
             ],

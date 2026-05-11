@@ -1,16 +1,44 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Brain, X, TrendingUp, Activity, Sparkles, MessageSquare } from 'lucide-react';
+import { Brain, X, TrendingUp, Activity, Sparkles, MessageSquare, Loader2 } from 'lucide-react';
+import api from '../config/api';
 
-const MOCK_INSIGHTS = [
-  { id: 1, type: 'trend', text: "Trend 'Copper Balayage' detected rising +14% in Mumbai.", icon: <TrendingUp size={14} /> },
-  { id: 2, type: 'health', text: "AURA Alert: Humidity in your area is high (82%). Use sealant.", icon: <Sparkles size={14} /> },
-  { id: 3, type: 'quality', text: "Operational Health: Service consistency is at 94% today.", icon: <Activity size={14} /> },
-  { id: 4, type: 'tip', text: "AURA Tip: Your face shape is best suited for layered waves.", icon: <MessageSquare size={14} /> },
-];
+const ICON_MAP: Record<string, React.ReactNode> = {
+  trend: <TrendingUp size={14} />,
+  health: <Sparkles size={14} />,
+  quality: <Activity size={14} />,
+  tip: <MessageSquare size={14} />,
+};
 
 export default function AuraPulse() {
   const [isOpen, setIsOpen] = useState(false);
+
+  const { data: insightsData, isLoading } = useQuery({
+    queryKey: ['aura-pulse-insights'],
+    queryFn: () =>
+      api.get('/agents/track6/intelligence/unified').then(r => {
+        const d = r.data?.data;
+        const insights: { id: number; type: string; text: string }[] = [];
+        if (d?.top_trends?.length) {
+          insights.push({ id: 1, type: 'trend', text: `Trend: ${d.top_trends[0].service_category} rising ${d.top_trends[0].signal_strength ? `${d.top_trends[0].signal_strength.toFixed(1)}/10` : ''}` });
+        }
+        if (d?.operational_health) {
+          insights.push({ id: 2, type: 'quality', text: `Operational Health: SOP compliance at ${d.operational_health.avg_sop_compliance ?? '--'}%` });
+        }
+        if (d?.climate_alert) {
+          insights.push({ id: 3, type: 'health', text: `AURA Alert: ${d.climate_alert}` });
+        }
+        if (d?.ai_recommendation) {
+          insights.push({ id: 4, type: 'tip', text: `AURA Tip: ${d.ai_recommendation}` });
+        }
+        return insights;
+      }).catch(() => []),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const insights = insightsData || [];
+  const count = insights.length;
 
   return (
     <div style={{ position: 'fixed', bottom: 30, right: 30, zIndex: 1000 }}>
@@ -39,7 +67,15 @@ export default function AuraPulse() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {MOCK_INSIGHTS.map((insight, i) => (
+              {isLoading ? (
+                <div style={{ textAlign: 'center', padding: '20px 0', color: 'rgba(255,255,255,0.4)' }}>
+                  <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
+                </div>
+              ) : insights.length === 0 ? (
+                <div style={{ textAlign: 'center', fontSize: '0.85rem', color: 'rgba(255,255,255,0.4)', padding: '12px 0' }}>
+                  No active insights
+                </div>
+              ) : insights.map((insight, i) => (
                 <motion.div
                   key={insight.id}
                   initial={{ opacity: 0, x: 20 }}
@@ -51,14 +87,14 @@ export default function AuraPulse() {
                     fontSize: '0.85rem', lineHeight: 1.4,
                   }}
                 >
-                  <div style={{ color: '#f44f9a', marginTop: 2 }}>{insight.icon}</div>
+                  <div style={{ color: '#f44f9a', marginTop: 2 }}>{ICON_MAP[insight.type] ?? <Sparkles size={14} />}</div>
                   <div>{insight.text}</div>
                 </motion.div>
               ))}
             </div>
 
             <div style={{ marginTop: 20, textAlign: 'center', fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-              • Live Intelligence Syncing •
+              • Live Intelligence •
             </div>
           </motion.div>
         )}
@@ -86,13 +122,15 @@ export default function AuraPulse() {
             border: '2px solid #f44f9a',
           }}
         />
-        <div style={{
-          position: 'absolute', top: -4, right: -4,
-          width: 20, height: 20, borderRadius: '50%',
-          background: '#f44f9a', border: '2px solid white',
-          fontSize: '10px', fontWeight: 900, display: 'flex',
-          alignItems: 'center', justifyContent: 'center',
-        }}>4</div>
+        {count > 0 && (
+          <div style={{
+            position: 'absolute', top: -4, right: -4,
+            width: 20, height: 20, borderRadius: '50%',
+            background: '#f44f9a', border: '2px solid white',
+            fontSize: '10px', fontWeight: 900, display: 'flex',
+            alignItems: 'center', justifyContent: 'center',
+          }}>{count}</div>
+        )}
       </motion.button>
     </div>
   );

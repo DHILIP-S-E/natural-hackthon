@@ -35,6 +35,16 @@ export default function BookNew() {
     }),
   });
 
+  // Fetch available time slots when location + date are selected
+  const { data: slotsData, isLoading: slotsLoading } = useQuery({
+    queryKey: ['booking-slots', selectedLocationId, selectedDate, selectedService?.id],
+    queryFn: () =>
+      api.get('/bookings/slots', {
+        params: { location_id: selectedLocationId, date_str: selectedDate, service_id: selectedService?.id },
+      }).then(r => r.data?.data?.slots as string[] ?? []),
+    enabled: !!(selectedLocationId && selectedDate),
+  });
+
   // Map API services to the shape the UI expects
   const SERVICES = (apiServices || []).map((s: any) => ({
     id: s.id,
@@ -180,9 +190,10 @@ export default function BookNew() {
           <h4 style={{ marginBottom: 12 }}>Choose Date & Time</h4>
           <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
             <input type="date" className="input" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} style={{ flex: 1 }} />
-            <select className="input" value={selectedTime} onChange={e => setSelectedTime(e.target.value)} style={{ flex: 1 }}>
-              <option value="">Select time</option>
-              {['10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM'].map(t => (
+            <select className="input" value={selectedTime} onChange={e => setSelectedTime(e.target.value)} style={{ flex: 1 }}
+              disabled={slotsLoading || !selectedLocationId || !selectedDate}>
+              <option value="">{slotsLoading ? 'Loading slots...' : 'Select time'}</option>
+              {(slotsData || []).map((t: string) => (
                 <option key={t} value={t}>{t}</option>
               ))}
             </select>

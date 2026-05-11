@@ -50,11 +50,12 @@ export default function StylistPerformance() {
 
   const recentFeedback = feedbackData || [];
 
-  // Build skills from specializations
-  const skills = specializations.map((s: string, i: number) => ({
+  // Build skills from specializations — use real proficiency from myProfile if available
+  const skillProficiency: Record<string, number> = myProfile?.skill_proficiency || {};
+  const skills = specializations.map((s: string) => ({
     name: s,
-    level: Math.max(60, 95 - i * 5),
-    certification: i === 0 ? 'Primary' : 'Trained',
+    level: skillProficiency[s] ?? myProfile?.proficiency_score ?? 70,
+    certification: myProfile?.primary_specialization === s ? 'Primary' : 'Trained',
   }));
   if (soulskinCert) {
     skills.push({ name: 'SOULSKIN', level: 95, certification: 'Certified' });

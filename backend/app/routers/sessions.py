@@ -34,6 +34,37 @@ async def create_session(
     return APIResponse(success=True, data={"id": str(session.id)}, message="Session created")
 
 
+@router.get("/active", response_model=APIResponse)
+async def get_active_session(db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
+    """Get the currently active session for the authenticated stylist."""
+    result = await db.execute(
+        select(ServiceSession)
+        .where(ServiceSession.status == SessionStatus.ACTIVE)
+        .order_by(ServiceSession.started_at.desc())
+        .limit(1)
+    )
+    session = result.scalar_one_or_none()
+    if not session:
+        return APIResponse(success=True, data=None, message="No active session")
+    return APIResponse(success=True, data={
+        "id": str(session.id), "booking_id": session.booking_id,
+        "sop_id": session.sop_id,
+        "status": enum_val(session.status) if session.status else None,
+        "current_step": session.current_step,
+        "steps_total": session.steps_total,
+        "steps_completed": session.steps_completed,
+        "started_at": str(session.started_at) if session.started_at else None,
+        "products_used": session.products_used,
+        "deviations": session.deviations,
+        "ai_coaching_prompts": session.ai_coaching_prompts,
+        "soulskin_active": session.soulskin_active,
+        "archetype_applied": session.archetype_applied,
+        "before_image_url": session.before_image_url,
+        "quality_score": float(session.quality_score) if session.quality_score else None,
+        "sop_compliance_pct": float(session.sop_compliance_pct) if session.sop_compliance_pct else None,
+    })
+
+
 @router.get("/{booking_id}", response_model=APIResponse)
 async def get_session(booking_id: UUID, db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
     result = await db.execute(

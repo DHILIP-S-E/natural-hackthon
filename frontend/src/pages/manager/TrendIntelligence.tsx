@@ -33,6 +33,13 @@ export default function TrendIntelligence() {
 
   const competitors = competitiveData || [];
 
+  // Regional demand heatmap — derived from real trend signals by city
+  const { data: regionalData } = useQuery({
+    queryKey: ['trends-regional-heatmap'],
+    queryFn: () => api.get('/agents/track4/trends/regional-map').then(r => r.data?.data?.city_demand || []),
+  });
+  const cityDemand: { city: string; intensity: number }[] = regionalData || [];
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xl)' }}>
       <div>
@@ -136,18 +143,17 @@ export default function TrendIntelligence() {
             <Activity size={18} color="var(--teal)" /> Regional Demand Heatmap
           </h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 16 }}>
-            {['Mumbai', 'Delhi', 'Bangalore', 'Chennai', 'Hyderabad', 'Pune'].map((city, idx) => {
-              const intensity = 40 + Math.random() * 50;
-              return (
-                <div key={city} style={{ padding: 12, background: 'var(--bg-surface)', borderRadius: 'var(--radius-md)', textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: 4 }}>{city}</div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--teal)' }}>{intensity.toFixed(0)}</div>
-                  <div style={{ height: 4, background: 'rgba(42,157,143,0.1)', borderRadius: 2, marginTop: 8, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${intensity}%`, background: 'var(--teal)' }} />
-                  </div>
+            {cityDemand.length === 0 ? (
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', gridColumn: '1/-1' }}>No regional data available yet.</p>
+            ) : cityDemand.map((entry) => (
+              <div key={entry.city} style={{ padding: 12, background: 'var(--bg-surface)', borderRadius: 'var(--radius-md)', textAlign: 'center' }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: 4 }}>{entry.city}</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--teal)' }}>{entry.intensity.toFixed(0)}</div>
+                <div style={{ height: 4, background: 'rgba(42,157,143,0.1)', borderRadius: 2, marginTop: 8, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${Math.min(100, entry.intensity)}%`, background: 'var(--teal)' }} />
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
           <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 16, fontStyle: 'italic' }}>
             * Signals based on search volume index and local booking velocity.

@@ -6,7 +6,7 @@ campaign recommendations.
 from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
-from fastapi import Depends, HTTPException, Query
+from fastapi import Body, Depends, HTTPException, Query
 from sqlalchemy import select, func, desc, and_, extract, case, distinct
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -697,7 +697,7 @@ seasonal_demand_forecast_agent = register_agent(AgentAction(
 # ─────────────────────────────────────────────────────────────────────────────
 
 async def social_trend_ingest_handler(
-    trend_data: dict = None,
+    trend_data: dict = Body(None),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_role(["salon_manager", "regional_manager", "super_admin"])),
 ):
@@ -950,7 +950,7 @@ trend_linked_training_agent = register_agent(AgentAction(
 # ─────────────────────────────────────────────────────────────────────────────
 
 async def competitor_intelligence_handler(
-    competitor_data: dict = None,
+    competitor_data: dict = Body(None),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_role(["salon_manager", "regional_manager", "franchise_owner", "super_admin"])),
 ):
