@@ -37,24 +37,45 @@ const STOCK_STATUS = (item: InventoryItem): { label: string; color: string; bg: 
   return { label: 'OK', color: '#22c55e', bg: 'rgba(34,197,94,0.1)' };
 };
 
-const UPCOMING_FESTIVALS = [
-  { month: 11, day: 1, name: 'Diwali Season', demand_multiplier: 2.2, days_away: 180 },
-  { month: 12, day: 25, name: 'Christmas', demand_multiplier: 1.5, days_away: 230 },
-  { month: 12, day: 31, name: "New Year's Eve", demand_multiplier: 2.0, days_away: 234 },
+const _FESTIVAL_DEFS = [
+  { month: 10, day: 2, name: 'Gandhi Jayanti', demand_multiplier: 1.3 },
+  { month: 11, day: 1, name: 'Diwali Season', demand_multiplier: 2.2 },
+  { month: 12, day: 25, name: 'Christmas', demand_multiplier: 1.5 },
+  { month: 12, day: 31, name: "New Year's Eve", demand_multiplier: 2.0 },
+  { month: 1, day: 14, name: 'Pongal / Makar Sankranti', demand_multiplier: 1.8 },
+  { month: 2, day: 14, name: "Valentine's Day", demand_multiplier: 1.6 },
+  { month: 3, day: 8, name: "Women's Day", demand_multiplier: 1.9 },
 ];
+
+const _today = new Date();
+const UPCOMING_FESTIVALS = _FESTIVAL_DEFS.map(f => {
+  let d = new Date(_today.getFullYear(), f.month - 1, f.day);
+  if (d <= _today) d = new Date(_today.getFullYear() + 1, f.month - 1, f.day);
+  return { ...f, days_away: Math.ceil((d.getTime() - _today.getTime()) / 86_400_000) };
+}).sort((a, b) => a.days_away - b.days_away).slice(0, 4);
 
 export default function InventoryForecast() {
   const [view, setView] = useState<'salon' | 'corporate'>('salon');
   const [search, setSearch] = useState('');
-  const locationId = localStorage.getItem('aura_location_id') || '';
+
+  const { data: myProfile } = useQuery<{ location_id: string }>({
+    queryKey: ['staff', 'me'],
+    queryFn: () => api.get('/staff/me').then(r => r.data?.data),
+    staleTime: 10 * 60 * 1000,
+  });
+  const locationId = myProfile?.location_id ?? '';
+
+  const inventoryUrl = view === 'corporate'
+    ? '/inventory?per_page=50'
+    : locationId ? `/inventory?location_id=${locationId}&per_page=50` : null;
 
   const { data: inventoryData, refetch, isFetching } = useQuery<{ items: InventoryItem[] }>({
-    queryKey: ['inventory', locationId],
+    queryKey: ['inventory', view, locationId],
     queryFn: async () => {
-      const res = await api.get(`/inventory?location_id=${locationId}&per_page=50`);
+      const res = await api.get(inventoryUrl!);
       return { items: res.data?.data?.items || [] };
     },
-    enabled: !!locationId,
+    enabled: view === 'corporate' || !!locationId,
   });
 
   const items = inventoryData?.items || [];

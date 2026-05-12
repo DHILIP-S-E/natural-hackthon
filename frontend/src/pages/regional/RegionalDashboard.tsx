@@ -7,23 +7,34 @@ import api from '../../config/api';
 const tooltipStyle = { backgroundColor: '#16161E', border: '1px solid #252530', borderRadius: '8px', fontSize: '0.75rem' };
 
 export default function RegionalDashboard() {
-  const { data: compare } = useQuery({
+  const { data: compare, isError: compareError } = useQuery({
     queryKey: ['analytics', 'compare'],
     queryFn: () => api.get('/analytics/compare').then(r => r.data?.data),
     staleTime: 5 * 60 * 1000,
+    retry: 2,
   });
 
-  const { data: overview } = useQuery({
+  const { data: overview, isError: overviewError } = useQuery({
     queryKey: ['analytics', 'overview'],
     queryFn: () => api.get('/analytics/overview').then(r => r.data?.data),
     staleTime: 5 * 60 * 1000,
+    retry: 2,
   });
 
   const { data: staffData } = useQuery({
     queryKey: ['analytics', 'staff'],
     queryFn: () => api.get('/analytics/staff').then(r => r.data?.data),
     staleTime: 5 * 60 * 1000,
+    retry: 2,
   });
+
+  const hasError = compareError && overviewError;
+
+  if (hasError) return (
+    <div style={{ padding: 32, textAlign: 'center', color: 'var(--error)' }}>
+      Failed to load regional analytics. Please refresh the page.
+    </div>
+  );
 
   const locations = compare?.locations || [];
   const regions = compare?.regions || [];

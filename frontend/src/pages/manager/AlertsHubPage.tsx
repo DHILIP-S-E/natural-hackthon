@@ -4,11 +4,6 @@ import { AlertTriangle, CloudSun, Flag, Bell } from 'lucide-react';
 import { TiltCard } from '../../components/ui/TiltCard';
 import api from '../../config/api';
 
-// Empty defaults for when API data is not yet loaded
-const EMPTY_ALERTS: any[] = [];
-const EMPTY_FLAGS: any[] = [];
-const EMPTY_NOTIFICATIONS: any[] = [];
-
 const SEVERITY_COLORS: Record<string, { dot: string; border: string }> = {
   warning: { dot: 'var(--warning)', border: 'rgba(244,162,97,0.3)' },
   info: { dot: 'var(--info)', border: 'rgba(74,159,212,0.3)' },
@@ -23,31 +18,43 @@ const NOTIF_COLORS: Record<string, string> = {
   trend: 'var(--gold)',
 };
 
+function EmptyState({ text }: { text: string }) {
+  return (
+    <TiltCard tiltIntensity={3} style={{ padding: '32px', background: '#fff', textAlign: 'center' }}>
+      <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{text}</p>
+    </TiltCard>
+  );
+}
+
+function LoadingCard() {
+  return <div className="card" style={{ padding: 20, height: 64, background: 'var(--bg-card)', animation: 'pulse 1.5s ease-in-out infinite' }} />;
+}
+
 export default function AlertsHubPage() {
-  const { data: climateAlerts } = useQuery({
+  const { data: climateAlerts, isLoading: alertsLoading } = useQuery({
     queryKey: ['climate-alerts'],
     queryFn: () => api.get('/climate/alerts').then(r => r.data?.data),
-    placeholderData: EMPTY_ALERTS,
   });
 
-  const { data: notifications } = useQuery({
+  const { data: notifications, isLoading: notifsLoading } = useQuery({
     queryKey: ['notifications'],
-    queryFn: () => api.get('/notifications').then(r => r.data?.data),
-    placeholderData: EMPTY_NOTIFICATIONS,
+    queryFn: () => api.get('/notifications').then(r => {
+      const d = r.data?.data;
+      return Array.isArray(d) ? d : d?.notifications || [];
+    }),
   });
 
-  const { data: qualityFlags } = useQuery({
+  const { data: qualityFlags, isLoading: flagsLoading } = useQuery({
     queryKey: ['quality-flagged'],
     queryFn: () => api.get('/quality/?per_page=10').then(r => {
       const data = r.data?.data || [];
       return (Array.isArray(data) ? data : []).filter((a: any) => a.is_flagged);
     }),
-    placeholderData: EMPTY_FLAGS,
   });
 
-  const alerts = climateAlerts || EMPTY_ALERTS;
-  const notifs = notifications || EMPTY_NOTIFICATIONS;
-  const flags = qualityFlags || EMPTY_FLAGS;
+  const alerts: any[] = climateAlerts || [];
+  const notifs: any[] = notifications || [];
+  const flags: any[] = qualityFlags || [];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xl)' }}>
@@ -68,7 +75,9 @@ export default function AlertsHubPage() {
           <h3 style={{ fontSize: '1rem', display: 'flex', alignItems: 'center', gap: 8 }}>
             <CloudSun size={18} style={{ color: 'var(--warning)' }} /> Climate Alerts
           </h3>
-          {alerts.map((alert: any, i: number) => {
+          {alertsLoading ? <LoadingCard /> : alerts.length === 0 ? (
+            <EmptyState text="No climate alerts — conditions are normal" />
+          ) : alerts.map((alert: any, i: number) => {
             const sev = SEVERITY_COLORS[alert.severity] || SEVERITY_COLORS.info;
             return (
               <TiltCard key={alert.id || i} tiltIntensity={5} style={{
@@ -92,7 +101,7 @@ export default function AlertsHubPage() {
           <h3 style={{ fontSize: '1rem', display: 'flex', alignItems: 'center', gap: 8 }}>
             <Flag size={18} style={{ color: 'var(--error)' }} /> Quality Flags
           </h3>
-          {flags.length > 0 ? flags.map((flag: any, i: number) => {
+          {flagsLoading ? <LoadingCard /> : flags.length > 0 ? flags.map((flag: any, i: number) => {
             const score = flag.overall_score ? (Number(flag.overall_score) / 20).toFixed(1) : Number(flag.score) || 0;
             const scoreNum = typeof score === 'string' ? parseFloat(score) : score;
             return (
@@ -113,10 +122,8 @@ export default function AlertsHubPage() {
                 </div>
               </TiltCard>
             );
-          }) : (
-            <TiltCard tiltIntensity={3} style={{ padding: '32px', background: '#fff', textAlign: 'center' }}>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No quality flags — all scores above threshold</p>
-            </TiltCard>
+          ) : (
+            <EmptyState text="No quality flags — all scores above threshold" />
           )}
         </motion.div>
       </div>
@@ -127,7 +134,11 @@ export default function AlertsHubPage() {
           <h4 style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Bell size={18} /> Recent Notifications</h4>
         </div>
         <div>
-          {notifs.map((n: any, i: number) => (
+          {notifsLoading ? (
+            <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>Loading notifications...</div>
+          ) : notifs.length === 0 ? (
+            <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>No notifications yet</div>
+          ) : notifs.map((n: any, i: number) => (
             <div key={n.id || i} style={{
               padding: '14px 20px',
               borderBottom: i < notifs.length - 1 ? '1px solid var(--border-subtle)' : 'none',
@@ -135,12 +146,15 @@ export default function AlertsHubPage() {
             }}>
               <div style={{
                 width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
-                background: NOTIF_COLORS[n.type] || 'var(--text-muted)',
+                background: NOTIF_COLORS[n.notification_type || n.type] || 'var(--text-muted)',
               }} />
               <div style={{ flex: 1 }}>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{n.message}</p>
+                <p style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-primary)' }}>{n.title}</p>
+                {n.body && <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: 2 }}>{n.body}</p>}
               </div>
-              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{n.time}</span>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                {n.created_at ? new Date(n.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''}
+              </span>
             </div>
           ))}
         </div>

@@ -49,8 +49,12 @@ export default function EcoTracker() {
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
 
-  // Get location from auth store in real app
-  const locationId = localStorage.getItem('aura_location_id') || '';
+  const { data: myProfile } = useQuery<{ location_id: string }>({
+    queryKey: ['staff', 'me'],
+    queryFn: () => api.get('/staff/me').then(r => r.data?.data),
+    staleTime: 10 * 60 * 1000,
+  });
+  const locationId = myProfile?.location_id ?? '';
 
   const { data: dashboard } = useQuery<EcoDashboard>({
     queryKey: ['eco-dashboard', locationId, month, year],

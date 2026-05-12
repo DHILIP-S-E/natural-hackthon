@@ -5,7 +5,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
-import { Award, TrendingUp, AlertTriangle, Star, Zap } from 'lucide-react';
+import { Award, AlertTriangle, Star } from 'lucide-react';
 import api from '../../config/api';
 
 interface StaffEntry {
@@ -30,28 +30,52 @@ const RISK_STYLES: Record<string, { color: string; bg: string }> = {
 
 const SKILL_BADGES: Record<string, string> = { L1: '🌱', L2: '⭐', L3: '💎' };
 
-const SAMPLE_DATA: StaffEntry[] = [
-  { id: '1', name: 'Priya Ravindran', location_name: 'Naturals Anna Nagar', city: 'Chennai', skill_level: 'L3', current_rating: 4.9, total_services_done: 1247, attrition_risk_score: 0.08, risk_label: 'low', badges: ['Top Performer', 'Colour Expert', 'SOULSKIN Certified'], specializations: ['Hair Colour', 'Balayage', 'Keratin'] },
-  { id: '2', name: 'Deepa Krishnan', location_name: 'Naturals T Nagar', city: 'Chennai', skill_level: 'L3', current_rating: 4.8, total_services_done: 1189, attrition_risk_score: 0.12, risk_label: 'low', badges: ['Bridal Specialist', 'SOULSKIN Certified'], specializations: ['Bridal Makeup', 'Hair Styling'] },
-  { id: '3', name: 'Anitha Suresh', location_name: 'Naturals Koramangala', city: 'Bangalore', skill_level: 'L3', current_rating: 4.7, total_services_done: 1053, attrition_risk_score: 0.25, risk_label: 'medium', badges: ['Skincare Expert'], specializations: ['Facial', 'Skin Treatment'] },
-  { id: '4', name: 'Keerthi Nair', location_name: 'Naturals Jubilee Hills', city: 'Hyderabad', skill_level: 'L2', current_rating: 4.6, total_services_done: 834, attrition_risk_score: 0.18, risk_label: 'low', badges: ['Rising Star'], specializations: ['Hair Cut', 'Head Massage'] },
-  { id: '5', name: 'Reka Murugan', location_name: 'Naturals Adyar', city: 'Chennai', skill_level: 'L2', current_rating: 4.5, total_services_done: 712, attrition_risk_score: 0.65, risk_label: 'high', badges: [], specializations: ['Manicure', 'Pedicure'] },
-];
+function riskLabel(score: number | null | undefined): string {
+  if (!score) return 'low';
+  if (score >= 0.5) return 'high';
+  if (score >= 0.25) return 'medium';
+  return 'low';
+}
 
 export default function NetworkLeaderboard() {
   const [filter, setFilter] = useState<'all' | 'L1' | 'L2' | 'L3'>('all');
   const [riskFilter, setRiskFilter] = useState<'all' | 'high'>('all');
 
-  const { data: staffData } = useQuery<StaffEntry[]>({
+  const { data: staffData, isLoading, isError } = useQuery<StaffEntry[]>({
     queryKey: ['network-leaderboard'],
     queryFn: async () => {
-      const res = await api.get('/staff?per_page=50&sort_by=rating&order=desc');
-      return res.data?.data?.staff || SAMPLE_DATA;
+      const res = await api.get('/staff?per_page=50');
+      const rawList: any[] = res.data?.data?.staff || [];
+      return rawList.map((s, idx) => ({
+        id: s.id,
+        name: s.name || 'Unknown',
+        location_name: s.location_name || '—',
+        city: s.city || '—',
+        skill_level: s.skill_level || 'L1',
+        current_rating: s.current_rating ?? 0,
+        total_services_done: s.total_services_done ?? 0,
+        attrition_risk_score: s.attrition_risk_score ?? 0,
+        risk_label: s.attrition_risk_label || riskLabel(s.attrition_risk_score),
+        badges: s.badges || [],
+        specializations: s.specializations || [],
+      })).sort((a, b) => b.current_rating - a.current_rating);
     },
-    placeholderData: SAMPLE_DATA,
+    staleTime: 5 * 60 * 1000,
   });
 
-  const staff = staffData || SAMPLE_DATA;
+  if (isLoading) return (
+    <div style={{ minHeight: '100vh', background: '#0A0A0F', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.4)' }}>
+      Loading leaderboard...
+    </div>
+  );
+
+  if (isError || !staffData) return (
+    <div style={{ minHeight: '100vh', background: '#0A0A0F', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444' }}>
+      Failed to load leaderboard data.
+    </div>
+  );
+
+  const staff = staffData;
   const filtered = staff
     .filter(s => filter === 'all' || s.skill_level === filter)
     .filter(s => riskFilter === 'all' || s.risk_label === 'high');

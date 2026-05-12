@@ -72,6 +72,41 @@ async def list_staff(
     )
 
 
+@router.get("/me", response_model=APIResponse)
+async def get_my_staff_profile(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get the staff profile for the currently authenticated user."""
+    result = await db.execute(
+        select(StaffProfile).options(selectinload(StaffProfile.user))
+        .where(StaffProfile.user_id == current_user.id)
+    )
+    staff = result.scalar_one_or_none()
+    if not staff:
+        raise HTTPException(status_code=404, detail="Staff profile not found for this user")
+
+    return APIResponse(
+        success=True,
+        data={
+            "id": staff.id,
+            "user_id": staff.user_id,
+            "employee_id": staff.employee_id,
+            "location_id": staff.location_id,
+            "name": f"{staff.user.first_name} {staff.user.last_name}" if staff.user else None,
+            "designation": staff.designation,
+            "specializations": staff.specializations,
+            "skill_level": enum_val(staff.skill_level) if staff.skill_level else None,
+            "is_available": staff.is_available,
+            "current_rating": float(staff.current_rating) if staff.current_rating else None,
+            "total_services_done": staff.total_services_done,
+            "soulskin_certified": staff.soulskin_certified,
+            "attrition_risk_score": float(staff.attrition_risk_score) if staff.attrition_risk_score else None,
+            "attrition_risk_label": enum_val(staff.attrition_risk_label) if staff.attrition_risk_label else None,
+        },
+    )
+
+
 @router.get("/{staff_id}", response_model=APIResponse)
 async def get_staff(
     staff_id: str,

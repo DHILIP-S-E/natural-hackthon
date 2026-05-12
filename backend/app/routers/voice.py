@@ -53,6 +53,38 @@ class VoiceQuery(BaseModel):
     active_booking_id: Optional[str] = None
 
 
+_INTENT_KEYWORDS: list[tuple[str, list[str]]] = [
+    ("client_history",    ["client", "customer", "history", "allergy", "allergic", "profile", "last visit", "last time"]),
+    ("staff_availability",["available", "free", "busy", "stylist", "who is", "schedule", "slot", "appointment"]),
+    ("technique_steps",   ["how to", "technique", "steps", "method", "procedure", "process", "tutorial", "guide"]),
+    ("product_info",      ["product", "ingredient", "brand", "chemical", "formula", "ratio", "shampoo", "conditioner"]),
+    ("booking_info",      ["booking", "appointment", "reservation", "booked", "when", "time", "today"]),
+]
+
+
+def _rule_based_intent(transcript: str, language: str) -> dict:
+    """Keyword-based intent parser used when no AI provider is configured."""
+    lower = transcript.lower()
+    matched_intent = "general"
+    for intent, keywords in _INTENT_KEYWORDS:
+        if any(kw in lower for kw in keywords):
+            matched_intent = intent
+            break
+
+    words = lower.split()
+    entities: dict = {}
+    # Simple name extraction: word after "client", "customer", "stylist" cue
+    for cue, field in [("client", "client_name"), ("customer", "client_name"), ("stylist", "stylist_name")]:
+        try:
+            idx = words.index(cue)
+            if idx + 1 < len(words):
+                entities[field] = words[idx + 1].capitalize()
+        except ValueError:
+            pass
+
+    return {"intent": matched_intent, "entities": entities, "response_language": language, "spoken_query": transcript}
+
+
 async def _call_ai_for_intent(transcript: str, language: str) -> dict:
     """Parse speech transcript into structured intent using Gemini/OpenAI."""
     import json
@@ -67,7 +99,7 @@ async def _call_ai_for_intent(transcript: str, language: str) -> dict:
         elif settings.OPENAI_API_KEY:
             text = await _call_openai(prompt)
         else:
-            return {"intent": "general", "entities": {}, "response_language": language, "spoken_query": transcript}
+            return _rule_based_intent(transcript, language)
 
         if text.startswith("```"):
             text = text.split("```")[1]
@@ -75,7 +107,7 @@ async def _call_ai_for_intent(transcript: str, language: str) -> dict:
                 text = text[4:]
         return json.loads(text.strip())
     except Exception:
-        return {"intent": "general", "entities": {}, "response_language": language, "spoken_query": transcript}
+        return _rule_based_intent(transcript, language)
 
 
 async def _fetch_client_history(entities: dict, location_id: Optional[str], db: AsyncSession) -> str:
