@@ -79,6 +79,11 @@ celery_app.conf.update(
             "task": "app.tasks.franchise_tasks.check_revenue_anomalies",
             "schedule": crontab(minute=30, hour=6, day_of_week=1),  # Monday 6:30 AM IST
         },
+        # ── NPS Post-Visit Survey ──
+        "nps-survey-every-15min": {
+            "task": "app.tasks.nps_tasks.send_nps_surveys",
+            "schedule": crontab(minute="*/15"),  # every 15 min catches 2h window
+        },
     },
 )
 

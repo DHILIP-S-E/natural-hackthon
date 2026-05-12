@@ -74,13 +74,34 @@ function TierRing({ tier, points, lifetime }: { tier: string; points: number; li
 
 export default function LoyaltyDashboard() {
   const qc = useQueryClient()
-  const [tab, setTab] = useState<'rewards' | 'history'>('rewards')
+  const [tab, setTab] = useState<'rewards' | 'history' | 'refer'>('rewards')
   const [redeemedCoupon, setRedeemedCoupon] = useState<{ code: string; name: string } | null>(null)
+  const [referralInput, setReferralInput] = useState('')
+  const [referralMsg, setReferralMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [copied, setCopied] = useState(false)
 
   const { data, isLoading } = useQuery<LoyaltyData>({
     queryKey: ['loyalty'],
     queryFn: () => api.get('/loyalty/me').then(r => r.data.data),
     staleTime: 30_000,
+  })
+
+  const { data: referralStats } = useQuery({
+    queryKey: ['loyalty-referral'],
+    queryFn: () => api.get('/loyalty/referral/stats').then(r => r.data.data),
+    staleTime: 60_000,
+  })
+
+  const applyReferralMut = useMutation({
+    mutationFn: (code: string) => api.post('/loyalty/referral/apply', { referral_code: code }).then(r => r.data),
+    onSuccess: (res) => {
+      setReferralMsg({ ok: true, text: res.message })
+      qc.invalidateQueries({ queryKey: ['loyalty'] })
+      qc.invalidateQueries({ queryKey: ['loyalty-referral'] })
+    },
+    onError: (err: any) => {
+      setReferralMsg({ ok: false, text: err?.response?.data?.detail ?? 'Invalid referral code' })
+    },
   })
 
   const redeemMut = useMutation({
@@ -178,14 +199,18 @@ export default function LoyaltyDashboard() {
 
         {/* Tabs */}
         <div className="flex gap-2">
-          {(['rewards', 'history'] as const).map(t => (
+          {([
+            ['rewards', '🎁 Rewards'],
+            ['history', '📋 History'],
+            ['refer', '🤝 Refer & Earn'],
+          ] as const).map(([t, label]) => (
             <button
               key={t}
-              onClick={() => setTab(t)}
-              className={`text-sm px-4 py-2 rounded-xl border transition-colors capitalize
+              onClick={() => setTab(t as typeof tab)}
+              className={`text-sm px-4 py-2 rounded-xl border transition-colors
                 ${tab === t ? 'border-[#C9A96E] bg-[#C9A96E]/10 text-[#C9A96E]' : 'border-white/10 text-gray-400 hover:border-white/30'}`}
             >
-              {t === 'rewards' ? '🎁 Rewards' : '📋 History'}
+              {label}
             </button>
           ))}
         </div>
@@ -245,6 +270,67 @@ export default function LoyaltyDashboard() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Refer & Earn tab */}
+        {tab === 'refer' && (
+          <div className="space-y-4">
+            {/* My referral code */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-3">
+              <div className="text-sm font-bold text-white">Your Referral Code</div>
+              <div className="flex items-center gap-3">
+                <div className="font-mono text-2xl font-bold text-[#C9A96E] tracking-widest flex-1">
+                  {data.referral_code ?? '—'}
+                </div>
+                {data.referral_code && (
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(data.referral_code!); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
+                    className="text-xs px-3 py-1.5 rounded-lg border border-[#C9A96E]/30 text-[#C9A96E] hover:bg-[#C9A96E]/10 transition-colors"
+                  >
+                    {copied ? '✓ Copied!' : 'Copy'}
+                  </button>
+                )}
+              </div>
+              <p className="text-xs text-gray-500">Share this code with friends. Both of you earn <span className="text-[#C9A96E] font-semibold">200 pts</span> when they join!</p>
+
+              {referralStats && (
+                <div className="flex gap-4 pt-2 border-t border-white/5">
+                  <div className="text-center">
+                    <div className="text-xl font-bold text-white">{referralStats.friends_referred}</div>
+                    <div className="text-xs text-gray-500">Friends referred</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-xl font-bold text-[#C9A96E]">{referralStats.total_referral_points}</div>
+                    <div className="text-xs text-gray-500">Pts earned from referrals</div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Apply a friend's code */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-3">
+              <div className="text-sm font-bold text-white">Have a friend's code?</div>
+              <p className="text-xs text-gray-400">Enter it below to earn 200 bonus points for both of you.</p>
+              <div className="flex gap-2">
+                <input
+                  value={referralInput}
+                  onChange={e => setReferralInput(e.target.value.toUpperCase())}
+                  placeholder="e.g. AURA3XK9"
+                  className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 outline-none focus:border-[#C9A96E]/50 font-mono"
+                />
+                <button
+                  onClick={() => { if (referralInput.trim()) applyReferralMut.mutate(referralInput.trim()) }}
+                  disabled={!referralInput.trim() || applyReferralMut.isPending}
+                  className="text-sm px-4 py-2 rounded-xl bg-[#C9A96E] text-black font-medium hover:bg-[#b8935a] disabled:opacity-40 transition-colors"
+                >
+                  {applyReferralMut.isPending ? '…' : 'Apply'}
+                </button>
+              </div>
+              {referralMsg && (
+                <p className={`text-xs ${referralMsg.ok ? 'text-emerald-400' : 'text-red-400'}`}>{referralMsg.text}</p>
+              )}
+            </div>
           </div>
         )}
       </div>

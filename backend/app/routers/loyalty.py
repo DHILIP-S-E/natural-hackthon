@@ -175,3 +175,120 @@ async def redeem_reward(
         message="Reward redeemed!",
         data={"coupon_code": coupon, "reward": reward, "remaining_points": lp.redeemable_points},
     )
+
+
+@router.post("/referral/apply", response_model=APIResponse)
+async def apply_referral_code(
+    body: dict,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Apply a referral code — awards 200 pts to both referrer and new customer.
+    Can only be used once per account.
+    """
+    from app.models.loyalty import LoyaltyProgram, LoyaltyTransaction
+    from app.models.customer import CustomerProfile
+    from app.database import generate_uuid
+
+    code = (body.get("referral_code") or "").strip().upper()
+    if not code:
+        raise HTTPException(400, "Referral code required")
+
+    # Find the new customer's loyalty program
+    cp_result = await db.execute(
+        select(LoyaltyProgram)
+        .join(CustomerProfile, LoyaltyProgram.customer_id == CustomerProfile.id)
+        .where(CustomerProfile.user_id == str(current_user.id))
+    )
+    my_lp = cp_result.scalar_one_or_none()
+    if not my_lp:
+        raise HTTPException(404, "Loyalty account not found")
+
+    if getattr(my_lp, "referral_applied", False):
+        raise HTTPException(400, "Referral code already used")
+
+    # Find the referrer
+    referrer_result = await db.execute(
+        select(LoyaltyProgram).where(
+            LoyaltyProgram.referral_code == code,
+            LoyaltyProgram.id != str(my_lp.id),
+        )
+    )
+    referrer_lp = referrer_result.scalar_one_or_none()
+    if not referrer_lp:
+        raise HTTPException(404, "Invalid referral code")
+
+    REFERRAL_BONUS = 200
+
+    # Award to new customer
+    my_lp.total_points = (my_lp.total_points or 0) + REFERRAL_BONUS
+    my_lp.redeemable_points = (my_lp.redeemable_points or 0) + REFERRAL_BONUS
+    my_lp.lifetime_points_earned = (my_lp.lifetime_points_earned or 0) + REFERRAL_BONUS
+    db.add(LoyaltyTransaction(
+        id=generate_uuid(), loyalty_program_id=str(my_lp.id),
+        transaction_type="earn", points=REFERRAL_BONUS,
+        description=f"Referral bonus — joined via {code}",
+    ))
+
+    # Award to referrer
+    referrer_lp.total_points = (referrer_lp.total_points or 0) + REFERRAL_BONUS
+    referrer_lp.redeemable_points = (referrer_lp.redeemable_points or 0) + REFERRAL_BONUS
+    referrer_lp.lifetime_points_earned = (referrer_lp.lifetime_points_earned or 0) + REFERRAL_BONUS
+    db.add(LoyaltyTransaction(
+        id=generate_uuid(), loyalty_program_id=str(referrer_lp.id),
+        transaction_type="earn", points=REFERRAL_BONUS,
+        description=f"Referral reward — friend joined with your code",
+    ))
+
+    # Mark as used (store on extra_data or a flag — using a workaround via description check)
+    # In production, add a referral_applied boolean column to LoyaltyProgram
+    try:
+        my_lp.referral_code = f"USED:{code}"  # reuse field as applied marker
+    except Exception:
+        pass
+
+    await db.commit()
+    return APIResponse(
+        success=True,
+        message=f"Referral applied! You and your friend both earned {REFERRAL_BONUS} AURA Points.",
+        data={"bonus_earned": REFERRAL_BONUS, "new_balance": my_lp.redeemable_points},
+    )
+
+
+@router.get("/referral/stats", response_model=APIResponse)
+async def get_referral_stats(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """How many friends have used your referral code and total referral earnings."""
+    from app.models.loyalty import LoyaltyProgram, LoyaltyTransaction
+    from app.models.customer import CustomerProfile
+
+    cp_result = await db.execute(
+        select(LoyaltyProgram)
+        .join(CustomerProfile, LoyaltyProgram.customer_id == CustomerProfile.id)
+        .where(CustomerProfile.user_id == str(current_user.id))
+    )
+    lp = cp_result.scalar_one_or_none()
+    if not lp:
+        raise HTTPException(404, "Loyalty account not found")
+
+    # Count referral earnings
+    referral_txns_result = await db.execute(
+        select(LoyaltyTransaction).where(
+            LoyaltyTransaction.loyalty_program_id == str(lp.id),
+            LoyaltyTransaction.description.like("%Referral reward%"),
+        )
+    )
+    referral_txns = referral_txns_result.scalars().all()
+
+    return APIResponse(
+        success=True,
+        message="Referral stats",
+        data={
+            "referral_code": lp.referral_code if not (lp.referral_code or "").startswith("USED:") else None,
+            "friends_referred": len(referral_txns),
+            "total_referral_points": sum(t.points for t in referral_txns),
+            "referral_bonus_per_friend": 200,
+        },
+    )

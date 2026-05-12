@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import api from '../../config/api';
 import UpsellCard from './UpsellCard';
+import CustomerBriefCard from './CustomerBriefCard';
 import ArchetypeBadge from '../../components/ArchetypeBadge';
 import { ARCH_DATA } from '../../constants/archetypes';
 import type { Archetype } from '../../types';
@@ -221,9 +222,16 @@ export default function LiveSession() {
           ))}
         </div>
 
+        {/* Customer brief — shown on step 1 so stylist is prepared */}
+        {currentStep === 1 && session.booking_id && (
+          <div style={{ maxWidth: 700, margin: '0 auto', width: '100%' }}>
+            <CustomerBriefCard bookingId={session.booking_id} />
+          </div>
+        )}
+
         {/* Upsell suggestions — shown before step 1 only */}
         {currentStep === 1 && session.booking_id && (
-          <div style={{ maxWidth: 700, margin: '0 auto 24px', width: '100%', padding: '0 24px' }}>
+          <div style={{ maxWidth: 700, margin: '0 auto 24px', width: '100%' }}>
             <UpsellCard bookingId={session.booking_id} />
           </div>
         )}

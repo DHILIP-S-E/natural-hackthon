@@ -42,21 +42,47 @@ def send_booking_reminders():
                 db.add(notif)
                 booking.reminder_sent_24h = True
 
-                # Send email
+                # Send email + WhatsApp
                 from app.models.user import User
                 from app.models.service import Service
+                from app.models.location import Location
+                from app.models.customer import CustomerProfile
                 user_r = await db.execute(select(User).where(User.id == booking.customer_id))
                 cust = user_r.scalar_one_or_none()
+
+                # Resolve customer profile for user lookup
+                if not cust and booking.customer_id:
+                    cp_r = await db.execute(select(CustomerProfile).where(CustomerProfile.id == booking.customer_id))
+                    cp = cp_r.scalar_one_or_none()
+                    if cp:
+                        user_r2 = await db.execute(select(User).where(User.id == cp.user_id))
+                        cust = user_r2.scalar_one_or_none()
+
                 svc_r = await db.execute(select(Service).where(Service.id == booking.service_id)) if booking.service_id else None
                 svc = svc_r.scalar_one_or_none() if svc_r else None
-                if cust and cust.email:
-                    from app.services.email_service import send_booking_reminder
-                    await send_booking_reminder(
-                        cust.email,
-                        f"{cust.first_name} {cust.last_name}",
-                        svc.name if svc else "Your appointment",
-                        str(booking.scheduled_at),
-                    )
+                loc = await db.get(Location, booking.location_id) if booking.location_id else None
+
+                if cust:
+                    scheduled_str = booking.scheduled_at.strftime("%d %b, %I:%M %p") if booking.scheduled_at else "your appointment"
+                    if cust.email:
+                        from app.services.email_service import send_booking_reminder
+                        await send_booking_reminder(
+                            cust.email,
+                            f"{cust.first_name} {cust.last_name}",
+                            svc.name if svc else "Your appointment",
+                            str(booking.scheduled_at),
+                        )
+                    if cust.phone:
+                        from app.services.sns_service import send_whatsapp
+                        form_url = f"https://natural.dhilip.in/consult/{booking.id}"
+                        wa_msg = (
+                            f"Hi {cust.first_name}! 💆 Reminder: Your *{svc.name if svc else 'appointment'}* "
+                            f"is tomorrow at *{scheduled_str}*"
+                            f"{f' at Naturals {loc.name}' if loc else ''}.\n\n"
+                            f"Fill your pre-visit form (2 min): {form_url}\n"
+                            f"Reply CANCEL to cancel or RESCHEDULE to change."
+                        )
+                        await send_whatsapp(cust.phone, wa_msg)
 
             # 2h reminders
             window_2h_start = now + timedelta(hours=1, minutes=30)

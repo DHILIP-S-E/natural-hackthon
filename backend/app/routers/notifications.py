@@ -61,3 +61,28 @@ async def mark_all_read(db: AsyncSession = Depends(get_db), user=Depends(get_cur
     )
     await db.commit()
     return APIResponse(success=True, message="All notifications marked as read")
+
+
+@router.post("/webhook/whatsapp-reply", response_model=APIResponse)
+async def whatsapp_reply_webhook(body: dict):
+    """Inbound WhatsApp reply webhook (SNS / Twilio callback).
+    Routes NPS score replies to nps_tasks.process_nps_reply.
+    Body expected: { "from": "+91...", "text": "8" }
+    """
+    phone = body.get("from") or body.get("phone") or ""
+    text = (body.get("text") or body.get("body") or "").strip()
+    if not phone or not text:
+        return APIResponse(success=False, message="Missing phone or text")
+
+    # Try to parse as NPS reply (numeric 1-10)
+    try:
+        score = int(text.split()[0])
+        if 1 <= score <= 10:
+            from app.tasks.nps_tasks import process_nps_reply
+            process_nps_reply.delay(phone, text)
+            return APIResponse(success=True, message="NPS reply queued", data={"score": score})
+    except (ValueError, IndexError):
+        pass
+
+    # Otherwise route to chatbot
+    return APIResponse(success=True, message="Reply received — not an NPS score")

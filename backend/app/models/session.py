@@ -72,6 +72,12 @@ class ServiceSession(Base, TimestampMixin):
     in_service_feedback: Mapped[dict | None] = mapped_column(JSON)
     comfort_level: Mapped[int | None] = mapped_column(Integer)
 
+    # Stylist reference (for AuraScore trigger)
+    stylist_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("staff_profiles.id"))
+
+    # NPS survey tracking
+    nps_sent: Mapped[bool] = mapped_column(Boolean, default=False)
+
     # Relationships
     booking = relationship("Booking", foreign_keys=[booking_id])
     sop = relationship("SOP", foreign_keys=[sop_id])
