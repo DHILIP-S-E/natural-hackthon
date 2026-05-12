@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import api from '../../lib/api'
+import api from '../../config/api'
 
 interface Message {
   role: 'user' | 'assistant'

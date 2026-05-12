@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { useAuthStore } from '../../stores/authStore'
-import api from '../../lib/api'
+import api from '../../config/api'
 
 const GRADE_COLOR: Record<string, string> = {
   S: 'text-yellow-400',

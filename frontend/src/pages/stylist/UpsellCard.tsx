@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState } from 'react'
-import api from '../../lib/api'
+import api from '../../config/api'
 
 interface Suggestion {
   service: string

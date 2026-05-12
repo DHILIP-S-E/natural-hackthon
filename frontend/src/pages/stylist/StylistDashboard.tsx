@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import {
   Calendar, Clock, CheckCircle, Play, Pause,
-  AlertTriangle, Sparkles, Star, BookOpen, Timer, ChevronRight
+  AlertTriangle, Sparkles, Star, BookOpen, Timer, ChevronRight, Award
 } from 'lucide-react';
 import ArchetypeBadge from '../../components/ArchetypeBadge';
 import api from '../../config/api';
@@ -15,6 +16,7 @@ const STATUS_MAP: Record<string, { color: string; label: string }> = {
 };
 
 export default function StylistDashboard() {
+  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [timerActive, setTimerActive] = useState(false);
   const [timerValue, setTimerValue] = useState(300);
@@ -303,6 +305,25 @@ export default function StylistDashboard() {
           </div>
         </div>
       </div>
+
+      {/* AuraScore shortcut */}
+      <motion.button
+        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+        onClick={() => navigate('/stylist/aurascore')}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+          background: 'linear-gradient(135deg,#1a0e08 0%,#2d1a08 100%)',
+          border: '1px solid rgba(201,169,110,0.3)', borderRadius: 'var(--radius-lg)',
+          padding: '16px 20px', cursor: 'pointer', textAlign: 'left',
+        }}
+      >
+        <Award size={22} color="#C9A96E" />
+        <div>
+          <div style={{ fontWeight: 700, color: '#C9A96E', fontSize: '0.9rem' }}>My AuraScore</div>
+          <div style={{ color: '#9B8A6A', fontSize: '0.75rem' }}>View your quality score, rank, and performance breakdown</div>
+        </div>
+        <ChevronRight size={18} color="#C9A96E" style={{ marginLeft: 'auto' }} />
+      </motion.button>
     </div>
   );
 }

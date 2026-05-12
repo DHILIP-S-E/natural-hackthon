@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import api from '../../lib/api'
+import api from '../../config/api'
 
 type BranchStatus = 'healthy' | 'at_risk' | 'critical'
 

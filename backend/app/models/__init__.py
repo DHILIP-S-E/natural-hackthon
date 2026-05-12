@@ -24,6 +24,7 @@ from app.models.inventory import InventoryItem, InventoryUsageLog
 from app.models.campaign import Campaign, CompetitiveIntel, CelebrityTrendSource
 from app.models.scheduling import StaffSchedule, FloatRequest
 from app.models.recommendation import ServiceRecommendation
+from app.models.loyalty import LoyaltyProgram, LoyaltyTransaction
 
 __all__ = [
     # Models
@@ -35,6 +36,10 @@ __all__ = [
     "SmartQueueEntry", "TrendSignal", "CustomerFeedback",
     "HomecarePlan", "TrainingRecord", "Notification",
     "KnowledgeBaseEntry",
+    "LoyaltyProgram", "LoyaltyTransaction",
+    "InventoryItem", "InventoryUsageLog",
+    "Campaign", "ServiceRecommendation",
+    "StaffSchedule", "FloatRequest",
     # Enums
     "UserRole", "SkillLevel", "AttritionRisk",
     "BookingStatus", "PaymentStatus", "PaymentMethod", "BookingSource",

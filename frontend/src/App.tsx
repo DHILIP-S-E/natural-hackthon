@@ -70,6 +70,7 @@ const ConsultationForm = lazy(() => import('./pages/public/ConsultationForm'));
 const WaitTimeDisplay = lazy(() => import('./pages/public/WaitTimeDisplay'));
 
 const BeautyTwinTimeline = lazy(() => import('./pages/customer/BeautyTwinTimeline'));
+const LoyaltyDashboard = lazy(() => import('./pages/customer/LoyaltyDashboard'));
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
@@ -112,6 +113,7 @@ export default function App() {
               <Route path="/app/profile" element={<CustomerProfilePage />} />
               <Route path="/app/skin-tone" element={<SkinToneBot />} />
               <Route path="/app/twin" element={<BeautyTwinTimeline />} />
+              <Route path="/app/loyalty" element={<LoyaltyDashboard />} />
             </Route>
 
             {/* Stylist routes */}
@@ -177,6 +179,7 @@ export default function App() {
               <Route path="/regional/trends" element={<TrendIntelligence />} />
               <Route path="/regional/compare" element={<CompareLocationsPage />} />
               <Route path="/regional/reports" element={<BIDashboard />} />
+              <Route path="/regional/performance" element={<FranchisePerformanceDashboard />} />
             </Route>
 
             {/* Super Admin routes */}
@@ -193,7 +196,7 @@ export default function App() {
               <Route path="/admin/ai" element={<AIEnginePage />} />
               <Route path="/admin/soulskin" element={<SoulskinAnalytics />} />
               <Route path="/admin/bi" element={<BIDashboard />} />
-              <Route path="/admin/training" element={<NetworkLeaderboard />} />
+              <Route path="/admin/training" element={<StylistTraining />} />
               <Route path="/admin/leaderboard" element={<NetworkLeaderboard />} />
               <Route path="/admin/inventory" element={<InventoryForecast />} />
               <Route path="/admin/eco" element={<EcoTracker />} />

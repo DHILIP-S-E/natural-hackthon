@@ -52,6 +52,35 @@ async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)):
         preferred_location_id=req.preferred_location_id,
     )
     db.add(profile)
+    await db.flush()
+
+    # Auto-enroll customer into AURA Points loyalty program
+    try:
+        from app.models.loyalty import LoyaltyProgram
+        from app.database import generate_uuid
+        import random, string
+        code = "AURA" + "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
+        lp = LoyaltyProgram(
+            id=generate_uuid(),
+            customer_id=profile.id,
+            tier="bronze",
+            total_points=100,          # 100 welcome points
+            redeemable_points=100,
+            lifetime_points_earned=100,
+            referral_code=code,
+        )
+        db.add(lp)
+        from app.models.loyalty import LoyaltyTransaction
+        welcome_txn = LoyaltyTransaction(
+            id=generate_uuid(),
+            loyalty_program_id=lp.id,
+            transaction_type="earn",
+            points=100,
+            description="Welcome to AURA! 🎉 Signup bonus",
+        )
+        db.add(welcome_txn)
+    except Exception:
+        pass
 
     access_token = create_access_token({"sub": user.id, "role": enum_val(user.role)})
     refresh_token = create_refresh_token({"sub": user.id})

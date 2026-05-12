@@ -83,19 +83,19 @@ async def _get_attrition_risk_count(location_id: str, db: AsyncSession) -> int:
     result = await db.execute(
         select(func.count(StaffProfile.id)).where(
             StaffProfile.location_id == location_id,
-            StaffProfile.attrition_risk >= 0.6,
+            StaffProfile.attrition_risk_score >= 0.6,
         )
     )
     return int(result.scalar() or 0)
 
 
 async def _get_inventory_alert_count(location_id: str, db: AsyncSession) -> int:
-    from app.models.inventory import Inventory
+    from app.models.inventory import InventoryItem
     try:
         result = await db.execute(
-            select(func.count(Inventory.id)).where(
-                Inventory.location_id == location_id,
-                Inventory.current_stock <= Inventory.reorder_level,
+            select(func.count(InventoryItem.id)).where(
+                InventoryItem.location_id == location_id,
+                InventoryItem.current_stock <= InventoryItem.reorder_level,
             )
         )
         return int(result.scalar() or 0)

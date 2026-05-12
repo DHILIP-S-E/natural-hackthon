@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Sparkles, Heart, Calendar, BookOpen, Award, TrendingUp, Sun, Droplets, Wind, Eye, Star, Shield, Smile } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Sparkles, Heart, Calendar, BookOpen, Award, TrendingUp, Sun, Droplets, Wind, Eye, Star, Shield, Smile, GitBranch, Trophy } from 'lucide-react';
 import BeautyScoreRing from '../../components/BeautyScoreRing';
 import { TiltCard } from '../../components/ui/TiltCard';
 import { Icon3D } from '../../components/ui/Icon3D';
@@ -16,6 +17,7 @@ const Skeleton = ({ width = '100%', height = 20 }: { width?: string | number; he
 
 export default function CustomerDashboard() {
   const [activeTab, setActiveTab] = useState<'passport' | 'soulskin' | 'journey'>('passport');
+  const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const customerId = user?.id || 'me';
 
@@ -29,6 +31,13 @@ export default function CustomerDashboard() {
   const { data: rec } = useQuery({
     queryKey: ['next-best-recommendation', customerId],
     queryFn: () => api.get(`/agents/track3/recommendations/next-best?customer_id=${customerId}`).then(r => r.data?.data),
+  });
+
+  // Fetch loyalty tier for display
+  const { data: loyaltyData } = useQuery({
+    queryKey: ['loyalty'],
+    queryFn: () => api.get('/loyalty/me').then(r => r.data?.data),
+    staleTime: 60_000,
   });
 
   // Fetch climate data for customer's city
@@ -112,6 +121,11 @@ export default function CustomerDashboard() {
               <div style={{ background: 'rgba(155,127,212,0.1)', border: '1px solid rgba(155,127,212,0.2)', color: '#9B7FD4', padding: '5px 12px', borderRadius: 'var(--radius-full)', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
                 <Sparkles size={12} /> Digital Twin Active
               </div>
+              {loyaltyData?.tier && (
+                <div style={{ background: 'rgba(201,169,110,0.1)', border: '1px solid rgba(201,169,110,0.25)', color: '#C9A96E', padding: '5px 12px', borderRadius: 'var(--radius-full)', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Trophy size={12} /> {loyaltyData.tier.charAt(0).toUpperCase() + loyaltyData.tier.slice(1)} · {loyaltyData.total_points?.toLocaleString()} pts
+                </div>
+              )}
               {latestMood && (
                 <div style={{ background: 'rgba(74,159,212,0.1)', border: '1px solid rgba(74,159,212,0.2)', color: '#4A9FD4', padding: '5px 12px', borderRadius: 'var(--radius-full)', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <Smile size={12} /> {latestMood.detected_emotion || latestMood.word}
@@ -190,6 +204,44 @@ export default function CustomerDashboard() {
             </motion.div>
           );
         })}
+      </div>
+
+      {/* Quick feature cards: Beauty Twin + AURA Points */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 'var(--space-md)' }}>
+        <motion.button
+          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+          onClick={() => navigate('/app/twin')}
+          style={{ textAlign: 'left', background: 'linear-gradient(135deg,#1a1a2e 0%,#2d1b4e 100%)', border: '1px solid rgba(155,127,212,0.3)', borderRadius: 'var(--radius-lg)', padding: 20, cursor: 'pointer' }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+            <GitBranch size={20} color="#9B7FD4" />
+            <span style={{ fontWeight: 700, color: '#9B7FD4', fontSize: '0.9rem' }}>Beauty Twin</span>
+          </div>
+          <p style={{ color: '#9B99B0', fontSize: '0.8rem', lineHeight: 1.5 }}>Your AI health timeline — skin, hair, hydration and progression scores.</p>
+        </motion.button>
+        <motion.button
+          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+          onClick={() => navigate('/app/loyalty')}
+          style={{ textAlign: 'left', background: 'linear-gradient(135deg,#1a1208 0%,#2d2010 100%)', border: '1px solid rgba(201,169,110,0.3)', borderRadius: 'var(--radius-lg)', padding: 20, cursor: 'pointer' }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+            <Trophy size={20} color="#C9A96E" />
+            <span style={{ fontWeight: 700, color: '#C9A96E', fontSize: '0.9rem' }}>AURA Points</span>
+            {loyaltyData?.tier && (
+              <span style={{ marginLeft: 'auto', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '2px 8px', borderRadius: 999, background: 'rgba(201,169,110,0.15)', color: '#C9A96E', border: '1px solid rgba(201,169,110,0.3)' }}>
+                {loyaltyData.tier}
+              </span>
+            )}
+          </div>
+          {loyaltyData ? (
+            <div>
+              <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#C9A96E', lineHeight: 1 }}>{(loyaltyData.total_points || 0).toLocaleString()}</div>
+              <div style={{ color: '#9B8A6A', fontSize: '0.75rem', marginTop: 2 }}>pts · {loyaltyData.redeemable_rewards?.length ?? 0} rewards available</div>
+            </div>
+          ) : (
+            <p style={{ color: '#9B8A6A', fontSize: '0.8rem', lineHeight: 1.5 }}>Earn points on every visit. Redeem for free services and discounts.</p>
+          )}
+        </motion.button>
       </div>
 
       {/* Tabs */}

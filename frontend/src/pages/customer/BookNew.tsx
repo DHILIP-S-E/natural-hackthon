@@ -16,6 +16,7 @@ export default function BookNew() {
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
   const [bookingSuccess, setBookingSuccess] = useState(false);
+  const [createdBookingId, setCreatedBookingId] = useState<string | null>(null);
 
   // Fetch services from API
   const { data: apiServices, isLoading: servicesLoading } = useQuery({
@@ -65,8 +66,9 @@ export default function BookNew() {
   // Booking submission mutation
   const bookingMutation = useMutation({
     mutationFn: (data: any) => api.post('/bookings', data).then(r => r.data),
-    onSuccess: () => {
+    onSuccess: (res) => {
       setBookingSuccess(true);
+      setCreatedBookingId(res?.data?.id ?? res?.id ?? null);
     },
   });
 
@@ -215,11 +217,28 @@ export default function BookNew() {
               <p style={{ color: 'var(--text-muted)', marginBottom: 24 }}>
                 Your {selectedService.name} at Naturals {selectedLocation} has been booked for {selectedDate} at {selectedTime}.
               </p>
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-                <a href="/app/bookings" className="btn btn-primary">View My Bookings</a>
-                <button className="btn btn-ghost" onClick={() => { setStep(1); setSelectedService(null); setSelectedLocation(''); setSelectedLocationId(''); setSelectedDate(''); setSelectedTime(''); setBookingSuccess(false); }}>
-                  Book Another
-                </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
+                {createdBookingId && (
+                  <div style={{ background: 'rgba(201,169,110,0.08)', border: '1px solid rgba(201,169,110,0.25)', borderRadius: 12, padding: '14px 20px', maxWidth: 420, width: '100%', textAlign: 'left' }}>
+                    <div style={{ fontWeight: 700, color: '#C9A96E', fontSize: '0.85rem', marginBottom: 4 }}>📋 Complete Your Consultation Form</div>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginBottom: 10 }}>
+                      Help your stylist prepare by filling out your skin/hair profile, allergies, and preferences before your visit.
+                    </p>
+                    <a
+                      href={`/consult/${createdBookingId}`}
+                      className="btn btn-primary"
+                      style={{ fontSize: '0.8rem', padding: '8px 16px' }}
+                    >
+                      Fill Consultation Form →
+                    </a>
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <a href="/app/bookings" className="btn btn-primary">View My Bookings</a>
+                  <button className="btn btn-ghost" onClick={() => { setStep(1); setSelectedService(null); setSelectedLocation(''); setSelectedLocationId(''); setSelectedDate(''); setSelectedTime(''); setBookingSuccess(false); setCreatedBookingId(null); }}>
+                    Book Another
+                  </button>
+                </div>
               </div>
             </div>
           ) : (

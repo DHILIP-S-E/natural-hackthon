@@ -203,6 +203,84 @@ async def complete_session(booking_id: UUID, stylist_notes: str = None,
     session.sop_compliance_pct = round((completed - deviations) / total * 100, 2) if total > 0 else 100
 
     await db.commit()
+
+    # Award loyalty points for the completed booking
+    try:
+        from app.models.booking import Booking
+        from app.models.customer import CustomerProfile
+        from app.models.loyalty import LoyaltyProgram, LoyaltyTransaction
+        from app.database import generate_uuid
+
+        _TIER_THRESHOLDS = {"bronze": 0, "silver": 1000, "gold": 3000, "platinum": 8000}
+        _TIER_MULTIPLIERS = {"bronze": 1.0, "silver": 1.25, "gold": 1.5, "platinum": 2.0}
+
+        def _tier_for_pts(pts: int) -> str:
+            t = "bronze"
+            for name, threshold in sorted(_TIER_THRESHOLDS.items(), key=lambda x: x[1], reverse=True):
+                if pts >= threshold:
+                    t = name
+                    break
+            return t
+
+        booking_result = await db.execute(
+            select(Booking).where(Booking.id == str(booking_id))
+        )
+        booking = booking_result.scalar_one_or_none()
+        if booking and booking.customer_id and booking.total_amount:
+            cp_result = await db.execute(
+                select(CustomerProfile).where(CustomerProfile.id == str(booking.customer_id))
+            )
+            cp = cp_result.scalar_one_or_none()
+            if cp:
+                lp_result = await db.execute(
+                    select(LoyaltyProgram).where(LoyaltyProgram.customer_id == str(cp.id))
+                )
+                lp = lp_result.scalar_one_or_none()
+                if not lp:
+                    import random, string
+                    code = "AURA" + "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
+                    lp = LoyaltyProgram(
+                        id=generate_uuid(), customer_id=str(cp.id),
+                        tier="bronze", total_points=0, redeemable_points=0,
+                        lifetime_points_earned=0, referral_code=code,
+                    )
+                    db.add(lp)
+
+                tier = _tier_for_pts(lp.lifetime_points_earned or 0)
+                multiplier = _TIER_MULTIPLIERS.get(tier, 1.0)
+                base_points = int(float(booking.total_amount))  # 1pt per ₹1
+                earned = int(base_points * multiplier)
+
+                lp.total_points = (lp.total_points or 0) + earned
+                lp.redeemable_points = (lp.redeemable_points or 0) + earned
+                lp.lifetime_points_earned = (lp.lifetime_points_earned or 0) + earned
+
+                # Check if tier upgrades
+                new_tier = _tier_for_pts(lp.lifetime_points_earned)
+                if new_tier != lp.tier:
+                    lp.tier = new_tier
+
+                txn = LoyaltyTransaction(
+                    id=generate_uuid(),
+                    loyalty_program_id=str(lp.id),
+                    booking_id=str(booking_id),
+                    transaction_type="earn",
+                    points=earned,
+                    description=f"Visit reward ({tier.title()} {multiplier}× on ₹{int(float(booking.total_amount))})",
+                )
+                db.add(txn)
+                await db.commit()
+    except Exception:
+        pass
+
+    # Trigger AuraScore recalculation for this stylist asynchronously
+    try:
+        from app.tasks.aurascore_tasks import check_stylist_score_drop
+        if session.stylist_id:
+            check_stylist_score_drop.delay(str(session.stylist_id))
+    except Exception:
+        pass
+
     return APIResponse(success=True, message="Session completed")
 
 

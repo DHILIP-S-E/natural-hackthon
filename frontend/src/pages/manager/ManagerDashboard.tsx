@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
-import { Calendar, Users, BookOpen, Star, Activity, AlertTriangle, ArrowUpRight, ArrowDownRight, DollarSign, Clock, ShieldCheck, Zap, TrendingUp, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Calendar, Users, BookOpen, Star, Activity, AlertTriangle, ArrowUpRight, ArrowDownRight, DollarSign, Clock, ShieldCheck, Zap, TrendingUp, ChevronRight, Award, Timer } from 'lucide-react';
 import { TiltCard } from '../../components/ui/TiltCard';
 import { InlineSparkle } from '../../components/ui/PremiumBadge';
 import api from '../../config/api';
@@ -10,6 +11,7 @@ const ICON_MAP: Record<string, any> = { DollarSign, BookOpen, Star, Activity };
 const STATUS_COLORS: Record<string, string> = { checked_in: 'var(--success)', confirmed: 'var(--teal)', pending: 'var(--warning)', in_progress: 'var(--gold)', completed: 'var(--success)' };
 
 export default function ManagerDashboard() {
+  const navigate = useNavigate();
   const { data: overview } = useQuery({
     queryKey: ['analytics', 'overview'],
     queryFn: () => api.get('/analytics/overview').then(r => r.data?.data),
@@ -266,6 +268,34 @@ export default function ManagerDashboard() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Quick links: AuraScore + Wait Time */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginTop: 16 }}>
+        <motion.button
+          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+          onClick={() => navigate('/manager/aurascore')}
+          style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'linear-gradient(135deg,#1a0e08 0%,#2d1a08 100%)', border: '1px solid rgba(201,169,110,0.3)', borderRadius: 12, padding: '14px 18px', cursor: 'pointer', textAlign: 'left' }}
+        >
+          <Award size={20} color="#C9A96E" />
+          <div>
+            <div style={{ fontWeight: 700, color: '#C9A96E', fontSize: '0.85rem' }}>Branch AuraScore</div>
+            <div style={{ color: '#9B8A6A', fontSize: '0.75rem' }}>Staff quality leaderboard</div>
+          </div>
+          <ChevronRight size={16} color="#C9A96E" style={{ marginLeft: 'auto' }} />
+        </motion.button>
+        <motion.button
+          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+          onClick={() => navigate('/manager/queue')}
+          style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'linear-gradient(135deg,#080e1a 0%,#0d1a2d 100%)', border: '1px solid rgba(74,159,212,0.3)', borderRadius: 12, padding: '14px 18px', cursor: 'pointer', textAlign: 'left' }}
+        >
+          <Timer size={20} color="#4A9FD4" />
+          <div>
+            <div style={{ fontWeight: 700, color: '#4A9FD4', fontSize: '0.85rem' }}>Wait Time</div>
+            <div style={{ color: '#6A8A9B', fontSize: '0.75rem' }}>Live queue &amp; walk-in predictor</div>
+          </div>
+          <ChevronRight size={16} color="#4A9FD4" style={{ marginLeft: 'auto' }} />
+        </motion.button>
       </div>
     </div>
   );

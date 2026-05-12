@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
-import api from '../../lib/api'
+import api from '../../config/api'
 
 const STATUS_CONFIG = {
   quiet:    { label: 'Walk-in friendly', color: '#34d399', bg: 'bg-emerald-500/10 border-emerald-500/20', icon: '🟢' },

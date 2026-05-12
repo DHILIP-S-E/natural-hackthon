@@ -146,6 +146,43 @@ def _detect_allergy_conflict(
         return {"risk_level": "LOW", "can_proceed": True, "reason": None, "suggested_alternative": None}
 
 
+@router.get("/booking/{booking_id}/info", response_model=APIResponse)
+async def get_consultation_booking_info(booking_id: str, db: AsyncSession = Depends(get_db)):
+    """Public endpoint — load basic booking details to pre-fill the consultation form header."""
+    from app.models.booking import Booking
+    from app.models.service import Service
+    from app.models.location import Location
+    from app.models.customer import CustomerProfile
+    from app.models.user import User as UserModel
+
+    booking = await db.get(Booking, booking_id)
+    if not booking:
+        raise HTTPException(404, "Booking not found")
+
+    service = await db.get(Service, booking.service_id) if booking.service_id else None
+    location = await db.get(Location, booking.location_id) if booking.location_id else None
+
+    customer_name = ""
+    if booking.customer_id:
+        cp = await db.get(CustomerProfile, booking.customer_id)
+        if cp:
+            user = await db.get(UserModel, cp.user_id)
+            if user:
+                customer_name = f"{user.first_name} {user.last_name}".strip()
+
+    return APIResponse(
+        success=True,
+        message="Booking info",
+        data={
+            "booking_id": booking_id,
+            "customer_name": customer_name,
+            "service_name": service.name if service else "Your Appointment",
+            "location_name": location.name if location else "",
+            "scheduled_at": str(booking.scheduled_at) if booking.scheduled_at else None,
+        },
+    )
+
+
 @router.post("/send-link", response_model=APIResponse)
 async def send_consultation_link(
     body: dict,

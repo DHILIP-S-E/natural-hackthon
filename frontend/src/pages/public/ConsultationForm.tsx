@@ -2,10 +2,10 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useParams, useSearchParams } from 'react-router-dom'
-import api from '../../lib/api'
+import api from '../../config/api'
 
 const schema = z.object({
   hair_type: z.string().optional(),
@@ -59,6 +59,13 @@ export default function ConsultationForm() {
   const [searchParams] = useSearchParams()
   const token = searchParams.get('token') ?? ''
   const [step, setStep] = useState(0)
+
+  const { data: bookingInfo } = useQuery({
+    queryKey: ['consultation-info', bookingId],
+    queryFn: () => api.get(`/consultation/booking/${bookingId}/info`).then(r => r.data.data),
+    enabled: !!bookingId,
+    retry: false,
+  })
   const [done, setDone] = useState(false)
   const [result, setResult] = useState<any>(null)
 
@@ -117,7 +124,17 @@ export default function ConsultationForm() {
         {/* Header */}
         <div className="text-center">
           <div className="text-[#C9A96E] text-2xl font-bold mb-1">Pre-Visit Consultation</div>
-          <p className="text-gray-400 text-sm">2 minutes to personalise your experience</p>
+          {bookingInfo ? (
+            <div className="mt-2 space-y-0.5">
+              <p className="text-white font-medium text-sm">{bookingInfo.customer_name || 'Welcome!'}</p>
+              <p className="text-gray-400 text-xs">{bookingInfo.service_name} · {bookingInfo.location_name}</p>
+              {bookingInfo.scheduled_at && (
+                <p className="text-gray-500 text-xs">{new Date(bookingInfo.scheduled_at).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
+              )}
+            </div>
+          ) : (
+            <p className="text-gray-400 text-sm">2 minutes to personalise your experience</p>
+          )}
         </div>
 
         {/* Progress */}
