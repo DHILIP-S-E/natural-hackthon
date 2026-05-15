@@ -1,7 +1,8 @@
-"""Auth router — register, login, logout, refresh, profile, users list."""
+"""Auth router — register, login, logout, refresh, profile, users list, Google OAuth."""
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select, func
+from pydantic import BaseModel
+from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 
@@ -14,6 +15,11 @@ from schemas.auth import (
 from schemas.common import APIResponse
 from utils.auth import hash_password, verify_password, create_access_token, create_refresh_token
 from utils.dependencies import get_current_user
+from utils.secrets import settings
+
+
+class GoogleAuthRequest(BaseModel):
+    id_token: str
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -222,6 +228,109 @@ async def register_push_token(
     """Register PWA push notification token."""
     current_user.push_token = push_token
     return APIResponse(success=True, message="Push token registered")
+
+
+@router.post("/google", response_model=APIResponse)
+async def google_signin(req: GoogleAuthRequest, db: AsyncSession = Depends(get_db)):
+    """Sign in or register using a Google ID token (from Firebase / Google OAuth)."""
+    import httpx
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            "https://oauth2.googleapis.com/tokeninfo",
+            params={"id_token": req.id_token},
+            timeout=10,
+        )
+    if resp.status_code != 200:
+        raise HTTPException(status_code=401, detail="Invalid Google token")
+
+    info = resp.json()
+
+    # Verify audience when client ID is configured
+    if settings.GOOGLE_CLIENT_ID and info.get("aud") != settings.GOOGLE_CLIENT_ID:
+        raise HTTPException(status_code=401, detail="Token audience mismatch")
+
+    google_uid = info.get("sub")
+    email = info.get("email")
+    if not email or not google_uid:
+        raise HTTPException(status_code=400, detail="Google account missing email")
+
+    name = info.get("name", "")
+    picture = info.get("picture")
+
+    result = await db.execute(
+        select(User).where(
+            User.is_deleted == False,
+            or_(User.google_id == google_uid, User.email == email),
+        )
+    )
+    user = result.scalar_one_or_none()
+
+    if user:
+        if not user.google_id:
+            user.google_id = google_uid
+        if picture and not user.avatar_url:
+            user.avatar_url = picture
+        user.last_login_at = datetime.now(timezone.utc)
+    else:
+        name_parts = name.split(" ", 1)
+        first = name_parts[0] if name_parts else email.split("@")[0]
+        last = name_parts[1] if len(name_parts) > 1 else ""
+
+        user = User(
+            email=email,
+            google_id=google_uid,
+            password_hash="!google_oauth",
+            role=UserRole.CUSTOMER,
+            first_name=first,
+            last_name=last,
+            avatar_url=picture,
+            is_verified=True,
+        )
+        db.add(user)
+        await db.flush()
+
+        profile = CustomerProfile(user_id=user.id)
+        db.add(profile)
+        await db.flush()
+
+        try:
+            from models.loyalty import LoyaltyProgram, LoyaltyTransaction
+            from db.db import generate_uuid
+            import random, string
+            code = "AURA" + "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
+            lp = LoyaltyProgram(
+                id=generate_uuid(), customer_id=profile.id, tier="bronze",
+                total_points=100, redeemable_points=100, lifetime_points_earned=100,
+                referral_code=code,
+            )
+            db.add(lp)
+            db.add(LoyaltyTransaction(
+                id=generate_uuid(), loyalty_program_id=lp.id,
+                transaction_type="earn", points=100,
+                description="Welcome to AURA! 🎉 Signup bonus",
+            ))
+        except Exception:
+            pass
+
+    await db.commit()
+    await db.refresh(user)
+
+    access_token = create_access_token({"sub": user.id, "role": enum_val(user.role)})
+    refresh_token = create_refresh_token({"sub": user.id})
+
+    return APIResponse(
+        success=True,
+        data=TokenResponse(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            user=UserBrief(
+                id=user.id, email=user.email,
+                first_name=user.first_name, last_name=user.last_name,
+                role=enum_val(user.role), avatar_url=user.avatar_url,
+            ),
+        ).model_dump(),
+        message="Google sign-in successful",
+    )
 
 
 @router.post("/logout", response_model=APIResponse)

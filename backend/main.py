@@ -16,7 +16,8 @@ from routers import (
     sessions, queue, trends, climate, feedback, notifications, homecare,
     mood, twin, mirror, journey, sops, quality, training, roles,
     skintone, eco, voice, aurascore, upsell, consultation, chatbot, waittime,
-    allergy, twin_timeline, franchise_dashboard, loyalty,
+    allergy, twin_timeline, franchise_dashboard, loyalty, config,
+    customer_auth, customer_profile,
 )
 
 from agents import get_all_agents, get_agents_by_track, get_agents_by_ps
@@ -114,6 +115,11 @@ app.include_router(allergy.router, prefix=API)
 app.include_router(twin_timeline.router, prefix=API)
 app.include_router(franchise_dashboard.router, prefix=API)
 app.include_router(loyalty.router, prefix=API)
+app.include_router(config.router, prefix=API)
+
+# ── Mobile app routers ────────────────────────────────────────────────────────
+app.include_router(customer_auth.router, prefix=API)
+app.include_router(customer_profile.router, prefix=API)
 
 
 # ── Health check ──────────────────────────────────────────────────────────────

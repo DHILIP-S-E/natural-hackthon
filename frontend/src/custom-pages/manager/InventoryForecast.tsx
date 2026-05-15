@@ -37,26 +37,22 @@ const STOCK_STATUS = (item: InventoryItem): { label: string; color: string; bg: 
   return { label: 'OK', color: '#22c55e', bg: 'rgba(34,197,94,0.1)' };
 };
 
-const _FESTIVAL_DEFS = [
-  { month: 10, day: 2, name: 'Gandhi Jayanti', demand_multiplier: 1.3 },
-  { month: 11, day: 1, name: 'Diwali Season', demand_multiplier: 2.2 },
-  { month: 12, day: 25, name: 'Christmas', demand_multiplier: 1.5 },
-  { month: 12, day: 31, name: "New Year's Eve", demand_multiplier: 2.0 },
-  { month: 1, day: 14, name: 'Pongal / Makar Sankranti', demand_multiplier: 1.8 },
-  { month: 2, day: 14, name: "Valentine's Day", demand_multiplier: 1.6 },
-  { month: 3, day: 8, name: "Women's Day", demand_multiplier: 1.9 },
-];
-
-const _today = new Date();
-const UPCOMING_FESTIVALS = _FESTIVAL_DEFS.map(f => {
-  let d = new Date(_today.getFullYear(), f.month - 1, f.day);
-  if (d <= _today) d = new Date(_today.getFullYear() + 1, f.month - 1, f.day);
-  return { ...f, days_away: Math.ceil((d.getTime() - _today.getTime()) / 86_400_000) };
-}).sort((a, b) => a.days_away - b.days_away).slice(0, 4);
+interface FestivalData {
+  name: string;
+  demand_multiplier: number;
+  days_away: number;
+}
 
 export default function InventoryForecast() {
   const [view, setView] = useState<'salon' | 'corporate'>('salon');
   const [search, setSearch] = useState('');
+
+  const { data: festivalsData } = useQuery<{ upcoming: FestivalData[] }>({
+    queryKey: ['config', 'festivals'],
+    queryFn: () => api.get('/config/festivals').then(r => r.data?.data),
+    staleTime: 60 * 60 * 1000,
+  });
+  const upcomingFestivals = festivalsData?.upcoming ?? [];
 
   const { data: myProfile } = useQuery<{ location_id: string }>({
     queryKey: ['staff', 'me'],
@@ -135,7 +131,7 @@ export default function InventoryForecast() {
             <span style={{ fontSize: 14, fontWeight: 600, color: '#C9A96E' }}>Festival Demand Alerts</span>
           </div>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            {UPCOMING_FESTIVALS.map(f => (
+            {upcomingFestivals.map(f => (
               <div key={f.name} style={{ padding: '10px 16px', background: 'rgba(255,255,255,0.04)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.06)', minWidth: 160 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', marginBottom: 4 }}>{f.name}</div>
                 <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginBottom: 6 }}>{f.days_away} days away</div>

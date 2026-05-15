@@ -4,7 +4,7 @@
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Search, Filter, Navigation, Phone, Clock, Users, Zap } from 'lucide-react';
+import { MapPin, Search, Navigation, Phone, Clock, Users, Zap, AlertCircle } from 'lucide-react';
 import axios from 'axios';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
@@ -28,11 +28,6 @@ interface Salon {
   rating: number;
 }
 
-const SERVICE_FILTERS = [
-  'All', 'Hair Colour', 'Keratin', 'Facial', 'Bridal Makeup',
-  'Manicure', 'Pedicure', 'Head Massage', 'Hair Cut',
-];
-
 export default function SalonMapPage() {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<google.maps.Map | null>(null);
@@ -40,11 +35,13 @@ export default function SalonMapPage() {
 
   const [salons, setSalons] = useState<Salon[]>([]);
   const [filtered, setFiltered] = useState<Salon[]>([]);
+  const [serviceFilters, setServiceFilters] = useState<string[]>(['All']);
   const [selected, setSelected] = useState<Salon | null>(null);
   const [search, setSearch] = useState('');
   const [serviceFilter, setServiceFilter] = useState('All');
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [mapsLoaded, setMapsLoaded] = useState(false);
   const [routeMode, setRouteMode] = useState<'DRIVING' | 'TRANSIT' | 'WALKING' | 'BICYCLING'>('DRIVING');
 
@@ -59,39 +56,43 @@ export default function SalonMapPage() {
     document.head.appendChild(script);
   }, []);
 
+  // Fetch service filters from config
+  useEffect(() => {
+    axios.get(`${API_BASE}/config/service-filters`).then(res => {
+      const filters = res.data?.data?.filters;
+      if (Array.isArray(filters)) setServiceFilters(filters);
+    }).catch(() => {});
+  }, []);
+
   // Fetch salons
   useEffect(() => {
+    setLoading(true);
+    setError(null);
     axios.get(`${API_BASE}/locations?per_page=100`).then(res => {
       const data = res.data?.data?.locations || [];
-      // Add computed fields (in production, backend provides these)
-      const enriched: Salon[] = data.map((loc: any) => ({
-        id: loc.id,
-        name: loc.name,
-        city: loc.city || '',
-        address: loc.address || loc.city || 'Naturals Salon',
-        phone: loc.phone || '',
-        lat: loc.latitude || 13.0827 + (Math.random() - 0.5) * 0.5,
-        lng: loc.longitude || 80.2707 + (Math.random() - 0.5) * 0.5,
-        is_active: loc.is_active !== false,
-        services_available: loc.services_available || ['Hair Cut', 'Facial', 'Hair Colour'],
-        staff_on_duty: loc.staff_on_duty || Math.floor(Math.random() * 6) + 2,
-        is_busy: loc.is_busy || Math.random() > 0.6,
-        busy_label: loc.busy_label || (Math.random() > 0.6 ? 'Busy today' : 'Walk-in friendly'),
-        open_time: '9:00 AM',
-        close_time: '8:00 PM',
-        rating: loc.average_rating || (3.8 + Math.random() * 1.2),
-      }));
+      const enriched: Salon[] = data
+        .filter((loc: any) => loc.latitude && loc.longitude)
+        .map((loc: any) => ({
+          id: loc.id,
+          name: loc.name,
+          city: loc.city || '',
+          address: loc.address || loc.city || '',
+          phone: loc.phone || '',
+          lat: parseFloat(loc.latitude),
+          lng: parseFloat(loc.longitude),
+          is_active: loc.is_active !== false,
+          services_available: loc.services_available || [],
+          staff_on_duty: loc.staff_on_duty ?? null,
+          is_busy: loc.is_busy ?? false,
+          busy_label: loc.busy_label || (loc.is_busy ? 'Busy today' : 'Walk-in friendly'),
+          open_time: loc.operating_hours?.Monday?.open || '',
+          close_time: loc.operating_hours?.Monday?.close || '',
+          rating: loc.average_rating ?? null,
+        }));
       setSalons(enriched);
       setFiltered(enriched);
     }).catch(() => {
-      // Demo data when API is unavailable
-      const demo: Salon[] = [
-        { id: '1', name: 'Naturals Anna Nagar', city: 'Chennai', address: '2nd Avenue, Anna Nagar', phone: '+91 98765 43210', lat: 13.0850, lng: 80.2101, is_active: true, services_available: ['Hair Cut', 'Facial', 'Hair Colour', 'Keratin'], staff_on_duty: 5, is_busy: false, busy_label: 'Walk-in friendly', open_time: '9:00 AM', close_time: '8:00 PM', rating: 4.7 },
-        { id: '2', name: 'Naturals T Nagar', city: 'Chennai', address: 'Pondy Bazaar, T Nagar', phone: '+91 98765 43211', lat: 13.0418, lng: 80.2341, is_active: true, services_available: ['Bridal Makeup', 'Hair Colour', 'Manicure', 'Pedicure'], staff_on_duty: 7, is_busy: true, busy_label: 'Busy today', open_time: '9:00 AM', close_time: '8:00 PM', rating: 4.5 },
-        { id: '3', name: 'Naturals Adyar', city: 'Chennai', address: 'LB Road, Adyar', phone: '+91 98765 43212', lat: 13.0012, lng: 80.2565, is_active: true, services_available: ['Hair Cut', 'Head Massage', 'Keratin'], staff_on_duty: 3, is_busy: false, busy_label: 'Walk-in friendly', open_time: '9:00 AM', close_time: '8:00 PM', rating: 4.3 },
-      ];
-      setSalons(demo);
-      setFiltered(demo);
+      setError('Unable to load salon locations. Please try again later.');
     }).finally(() => setLoading(false));
   }, []);
 
@@ -99,7 +100,7 @@ export default function SalonMapPage() {
   useEffect(() => {
     navigator.geolocation?.getCurrentPosition(
       pos => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => setUserLocation({ lat: 13.0827, lng: 80.2707 }) // Chennai default
+      () => setUserLocation({ lat: 13.0827, lng: 80.2707 })
     );
   }, []);
 
@@ -162,7 +163,7 @@ export default function SalonMapPage() {
     setFiltered(result);
   }, [search, serviceFilter, salons]);
 
-  const openDirections = (salon: Salon) => {
+  const openDirections = useCallback((salon: Salon) => {
     const dest = `${salon.lat},${salon.lng}`;
     const origin = userLocation ? `${userLocation.lat},${userLocation.lng}` : '';
     const modes: Record<string, string> = {
@@ -170,7 +171,7 @@ export default function SalonMapPage() {
     };
     const url = `https://www.google.com/maps/dir/?api=1&destination=${dest}&origin=${origin}&travelmode=${modes[routeMode]}`;
     window.open(url, '_blank');
-  };
+  }, [userLocation, routeMode]);
 
   return (
     <div style={{ minHeight: '100vh', background: '#0A0A0F', color: '#fff', fontFamily: 'DM Sans, sans-serif' }}>
@@ -197,7 +198,7 @@ export default function SalonMapPage() {
           />
         </div>
         <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
-          {SERVICE_FILTERS.map(f => (
+          {serviceFilters.map(f => (
             <button key={f} onClick={() => setServiceFilter(f)} style={{ padding: '6px 14px', borderRadius: 20, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: 12, fontWeight: 600, background: serviceFilter === f ? '#C9A96E' : 'rgba(255,255,255,0.06)', color: serviceFilter === f ? '#0A0A0F' : 'rgba(255,255,255,0.6)', transition: 'all 0.2s' }}>
               {f}
             </button>
@@ -210,6 +211,15 @@ export default function SalonMapPage() {
         <div style={{ width: 340, overflowY: 'auto', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
           {loading ? (
             <div style={{ padding: 24, textAlign: 'center', color: 'rgba(255,255,255,0.4)' }}>Loading salons...</div>
+          ) : error ? (
+            <div style={{ padding: 24, textAlign: 'center', color: '#ef4444', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+              <AlertCircle size={32} style={{ opacity: 0.6 }} />
+              <div style={{ fontSize: 13 }}>{error}</div>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div style={{ padding: 24, textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>
+              No salons found matching your search.
+            </div>
           ) : filtered.map(salon => (
             <motion.div
               key={salon.id}
@@ -225,17 +235,21 @@ export default function SalonMapPage() {
               </div>
               <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginBottom: 6 }}>{salon.address}</div>
               <div style={{ display: 'flex', gap: 12, fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
-                <span><Users size={10} style={{ marginRight: 3 }} />{salon.staff_on_duty} staff on duty</span>
-                <span>★ {salon.rating.toFixed(1)}</span>
-              </div>
-              <div style={{ display: 'flex', gap: 4, marginTop: 8, flexWrap: 'wrap' }}>
-                {salon.services_available.slice(0, 3).map(sv => (
-                  <span key={sv} style={{ fontSize: 10, padding: '2px 6px', background: 'rgba(201,169,110,0.1)', color: '#C9A96E', borderRadius: 4 }}>{sv}</span>
-                ))}
-                {salon.services_available.length > 3 && (
-                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>+{salon.services_available.length - 3} more</span>
+                {salon.staff_on_duty !== null && (
+                  <span><Users size={10} style={{ marginRight: 3 }} />{salon.staff_on_duty} staff on duty</span>
                 )}
+                {salon.rating !== null && <span>★ {salon.rating.toFixed(1)}</span>}
               </div>
+              {salon.services_available.length > 0 && (
+                <div style={{ display: 'flex', gap: 4, marginTop: 8, flexWrap: 'wrap' }}>
+                  {salon.services_available.slice(0, 3).map(sv => (
+                    <span key={sv} style={{ fontSize: 10, padding: '2px 6px', background: 'rgba(201,169,110,0.1)', color: '#C9A96E', borderRadius: 4 }}>{sv}</span>
+                  ))}
+                  {salon.services_available.length > 3 && (
+                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>+{salon.services_available.length - 3} more</span>
+                  )}
+                </div>
+              )}
             </motion.div>
           ))}
         </div>
@@ -268,9 +282,13 @@ export default function SalonMapPage() {
               </div>
 
               <div style={{ display: 'flex', gap: 16, marginBottom: 14, fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
-                <span><Clock size={12} style={{ marginRight: 4 }} />{selected.open_time} – {selected.close_time}</span>
-                <span><Users size={12} style={{ marginRight: 4 }} />{selected.staff_on_duty} on duty</span>
-                <span>★ {selected.rating.toFixed(1)}</span>
+                {selected.open_time && selected.close_time && (
+                  <span><Clock size={12} style={{ marginRight: 4 }} />{selected.open_time} – {selected.close_time}</span>
+                )}
+                {selected.staff_on_duty !== null && (
+                  <span><Users size={12} style={{ marginRight: 4 }} />{selected.staff_on_duty} on duty</span>
+                )}
+                {selected.rating !== null && <span>★ {selected.rating.toFixed(1)}</span>}
               </div>
 
               {/* Route mode selector */}

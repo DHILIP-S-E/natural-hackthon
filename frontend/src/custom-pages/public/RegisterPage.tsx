@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { GoogleLogin } from '@react-oauth/google';
 import { useAuthStore, getRoleRedirect } from '../../stores/authStore';
 import api from '../../config/api';
 
@@ -17,6 +18,23 @@ export default function RegisterPage() {
   }
 
   const update = (field: string, value: string) => setForm(f => ({ ...f, [field]: value }));
+
+  const handleGoogleSuccess = async (credentialResponse: { credential?: string }) => {
+    if (!credentialResponse.credential) return;
+    setLoading(true);
+    setError('');
+    try {
+      const res = await api.post('/auth/google', { id_token: credentialResponse.credential });
+      const { access_token, user } = res.data?.data ?? {};
+      if (!access_token || !user) { setError('Invalid response from server'); return; }
+      login(access_token, user);
+      navigate(getRoleRedirect(user.role));
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Google sign-in failed');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -50,6 +68,23 @@ export default function RegisterPage() {
         </div>
 
         {error && <div style={{ background: 'var(--rose-glow)', border: '1px solid var(--rose)', borderRadius: 'var(--radius-md)', padding: '10px 14px', marginBottom: 16, color: 'var(--rose)', fontSize: '0.85rem' }}>{error}</div>}
+
+        {/* Google Sign-Up — one-click registration */}
+        <div style={{ marginBottom: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={() => setError('Google sign-in failed')}
+            text="signup_with"
+            theme="filled_black"
+            shape="rectangular"
+            width="480"
+          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}>
+            <div style={{ flex: 1, height: 1, background: 'var(--border-subtle)' }} />
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>or register with email</span>
+            <div style={{ flex: 1, height: 1, background: 'var(--border-subtle)' }} />
+          </div>
+        </div>
 
         <div className="card" style={{ padding: 'var(--space-xl)' }}>
           {step === 1 && (

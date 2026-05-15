@@ -26,13 +26,14 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>
 
-const STEPS = ['Hair & Scalp', 'Skin', 'Allergies', 'Visit Intent', 'Health & Sign']
-
-const HAIR_TYPES = ['Straight', 'Wavy', 'Curly', 'Coily']
-const SCALP_CONDITIONS = ['Normal', 'Oily', 'Dry', 'Sensitive']
-const SKIN_TYPES = ['Oily', 'Dry', 'Combination', 'Normal', 'Sensitive']
-const VISIT_GOALS = ['Maintain current look', 'Try something new', 'Special occasion', 'Repair & restore']
-const BUDGETS = ['Budget', 'Standard', 'Premium']
+const DEFAULT_OPTIONS = {
+  steps: ['Hair & Scalp', 'Skin', 'Allergies', 'Visit Intent', 'Health & Sign'],
+  hair_types: ['Straight', 'Wavy', 'Curly', 'Coily'],
+  scalp_conditions: ['Normal', 'Oily', 'Dry', 'Sensitive'],
+  skin_types: ['Oily', 'Dry', 'Combination', 'Normal', 'Sensitive'],
+  visit_goals: ['Maintain current look', 'Try something new', 'Special occasion', 'Repair & restore'],
+  budgets: ['Budget', 'Standard', 'Premium'],
+}
 
 function OptionGrid({ options, selected, onSelect }: { options: string[]; selected?: string; onSelect: (v: string) => void }) {
   return (
@@ -59,6 +60,19 @@ export default function ConsultationForm() {
   const [searchParams] = useSearchParams()
   const token = searchParams.get('token') ?? ''
   const [step, setStep] = useState(0)
+
+  const { data: opts } = useQuery({
+    queryKey: ['config', 'consultation-options'],
+    queryFn: () => api.get('/config/consultation-options').then(r => r.data?.data),
+    staleTime: Infinity,
+  })
+  const options = opts ?? DEFAULT_OPTIONS
+  const STEPS = options.steps
+  const HAIR_TYPES = options.hair_types
+  const SCALP_CONDITIONS = options.scalp_conditions
+  const SKIN_TYPES = options.skin_types
+  const VISIT_GOALS = options.visit_goals
+  const BUDGETS = options.budgets
 
   const { data: bookingInfo } = useQuery({
     queryKey: ['consultation-info', bookingId],

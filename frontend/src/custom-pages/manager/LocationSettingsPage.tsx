@@ -1,33 +1,68 @@
 import { motion } from 'framer-motion';
-import { Settings, MapPin, Phone, Users, Sparkles, ScanFace, Clock } from 'lucide-react';
+import { Settings, MapPin, Phone, Users, Sparkles, ScanFace, Clock, Loader } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { TiltCard } from '../../components/ui/TiltCard';
+import api from '../../config/api';
 
-const LOCATION_INFO = {
-  name: 'Naturals Anna Nagar',
-  phone: '+91 44 2626 1234',
-  city: 'Chennai',
-  code: 'CHN-AN',
-  capacity: 8,
-  soulskin_enabled: true,
-  smart_mirror_enabled: true,
-};
+interface LocationData {
+  id: string;
+  name: string;
+  phone: string | null;
+  city: string;
+  code: string | null;
+  seating_capacity: number | null;
+  soulskin_enabled: boolean;
+  smart_mirror_enabled: boolean;
+  operating_hours: Record<string, { open: string; close: string }> | null;
+}
 
-const OPERATING_HOURS = [
-  { day: 'Monday', open: '09:00', close: '21:00' },
-  { day: 'Tuesday', open: '09:00', close: '21:00' },
-  { day: 'Wednesday', open: '09:00', close: '21:00' },
-  { day: 'Thursday', open: '09:00', close: '21:00' },
-  { day: 'Friday', open: '09:00', close: '21:00' },
-  { day: 'Saturday', open: '08:00', close: '22:00' },
-  { day: 'Sunday', open: '10:00', close: '20:00' },
-];
-
-const FEATURE_TOGGLES = [
-  { key: 'soulskin_enabled', label: 'SOULSKIN Engine', enabled: LOCATION_INFO.soulskin_enabled, icon: Sparkles, color: 'var(--violet)' },
-  { key: 'smart_mirror_enabled', label: 'AI Smart Mirror', enabled: LOCATION_INFO.smart_mirror_enabled, icon: ScanFace, color: 'var(--gold)' },
-];
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 export default function LocationSettingsPage() {
+  const { data: profile } = useQuery<{ location_id: string }>({
+    queryKey: ['staff', 'me'],
+    queryFn: () => api.get('/staff/me').then(r => r.data?.data),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const locationId = profile?.location_id;
+
+  const { data: location, isLoading } = useQuery<LocationData>({
+    queryKey: ['location', locationId],
+    queryFn: () => api.get(`/locations/${locationId}`).then(r => r.data?.data),
+    enabled: !!locationId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: sysConfig } = useQuery<{
+    default_operating_hours: { day: string; open: string; close: string }[];
+  }>({
+    queryKey: ['config', 'system'],
+    queryFn: () => api.get('/config/system').then(r => r.data?.data),
+    staleTime: Infinity,
+  });
+
+  const featureToggles = [
+    { key: 'soulskin_enabled', label: 'SOULSKIN Engine', enabled: location?.soulskin_enabled ?? false, icon: Sparkles, color: 'var(--violet)' },
+    { key: 'smart_mirror_enabled', label: 'AI Smart Mirror', enabled: location?.smart_mirror_enabled ?? false, icon: ScanFace, color: 'var(--gold)' },
+  ];
+
+  const operatingHours = DAYS.map(day => {
+    const fromLocation = location?.operating_hours?.[day];
+    if (fromLocation) return { day, open: fromLocation.open, close: fromLocation.close };
+    const fallback = sysConfig?.default_operating_hours?.find(h => h.day === day);
+    return { day, open: fallback?.open ?? '—', close: fallback?.close ?? '—' };
+  });
+
+  if (isLoading || !location) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 200, color: 'var(--text-muted)', gap: 10 }}>
+        <Loader size={18} />
+        {isLoading ? 'Loading location settings...' : 'No location assigned to your profile.'}
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xl)' }}>
       {/* Header */}
@@ -37,16 +72,16 @@ export default function LocationSettingsPage() {
           Location Settings
         </h1>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: 4 }}>
-          Configuration for {LOCATION_INFO.name}
+          Configuration for {location.name}
         </p>
       </div>
 
       {/* Location Info Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-md)' }}>
         {[
-          { label: 'Location Name', value: LOCATION_INFO.name, icon: MapPin, color: 'var(--teal)' },
-          { label: 'Phone', value: LOCATION_INFO.phone, icon: Phone, color: 'var(--info)' },
-          { label: 'Capacity', value: `${LOCATION_INFO.capacity} chairs`, icon: Users, color: 'var(--success)' },
+          { label: 'Location Name', value: location.name, icon: MapPin, color: 'var(--teal)' },
+          { label: 'Phone', value: location.phone ?? '—', icon: Phone, color: 'var(--info)' },
+          { label: 'Capacity', value: location.seating_capacity ? `${location.seating_capacity} chairs` : '—', icon: Users, color: 'var(--success)' },
         ].map((item, i) => {
           const Icon = item.icon;
           return (
@@ -67,7 +102,7 @@ export default function LocationSettingsPage() {
       <div>
         <h3 style={{ fontSize: '1rem', marginBottom: 'var(--space-md)' }}>Feature Toggles</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 'var(--space-md)' }}>
-          {FEATURE_TOGGLES.map((ft, i) => {
+          {featureToggles.map((ft, i) => {
             const Icon = ft.icon;
             return (
               <motion.div key={ft.key} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 + i * 0.08 }}>
@@ -111,7 +146,7 @@ export default function LocationSettingsPage() {
               <tr><th>Day</th><th>Open</th><th>Close</th></tr>
             </thead>
             <tbody>
-              {OPERATING_HOURS.map((h, i) => (
+              {operatingHours.map((h, i) => (
                 <tr key={i}>
                   <td style={{ fontWeight: 600, fontSize: '0.9rem', padding: '12px 20px' }}>{h.day}</td>
                   <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', fontWeight: 500 }}>{h.open}</td>

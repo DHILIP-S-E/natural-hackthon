@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Heart, ArrowRight, Music, Palette, MessageSquare, ChevronRight } from 'lucide-react';
 import ArchetypeBadge from '../../components/ArchetypeBadge';
@@ -7,11 +7,17 @@ import type { Archetype } from '../../types';
 import { ARCHETYPES } from '../../types';
 import api from '../../config/api';
 
-const QUESTIONS = [
-  { key: 'song', emoji: '\uD83C\uDFB5', question: 'What song describes your life right now?', placeholder: 'e.g. Kesariya, Shape of You, Numb...', icon: <Music size={24} /> },
-  { key: 'colour', emoji: '\uD83C\uDFA8', question: 'What colour matches your mood today?', placeholder: 'e.g. Gold, Grey, Red, Blue...', icon: <Palette size={24} /> },
-  { key: 'word', emoji: '\uD83D\uDCAC', question: 'One word you want to FEEL when you leave?', placeholder: 'e.g. Free, Bold, Peace, Alive...', icon: <MessageSquare size={24} /> },
+const DEFAULT_QUESTIONS = [
+  { key: 'song',   emoji: '\uD83C\uDFB5', question: 'What song describes your life right now?',  placeholder: 'e.g. Kesariya, Shape of You, Numb...' },
+  { key: 'colour', emoji: '\uD83C\uDFA8', question: 'What colour matches your mood today?',       placeholder: 'e.g. Gold, Grey, Red, Blue...' },
+  { key: 'word',   emoji: '\uD83D\uDCAC', question: 'One word you want to FEEL when you leave?',  placeholder: 'e.g. Free, Bold, Peace, Alive...' },
 ];
+
+const QUESTION_ICONS: Record<string, React.ReactNode> = {
+  song:   <Music size={24} />,
+  colour: <Palette size={24} />,
+  word:   <MessageSquare size={24} />,
+};
 
 const READINGS: Record<Archetype, {
   reading: string;
@@ -78,6 +84,13 @@ function determineArchetype(song: string, colour: string, word: string): Archety
 }
 
 export default function SoulskinFlow() {
+  const { data: questionsData } = useQuery<{ questions: typeof DEFAULT_QUESTIONS }>({
+    queryKey: ['config', 'soulskin-questions'],
+    queryFn: () => import('../../config/api').then(m => m.default.get('/config/soulskin-questions').then(r => r.data?.data)),
+    staleTime: Infinity,
+  });
+  const QUESTIONS = questionsData?.questions ?? DEFAULT_QUESTIONS;
+
   const [step, setStep] = useState(0); // 0=intro, 1-3=questions, 4=reveal, 5=reading
   const [answers, setAnswers] = useState({ song: '', colour: '', word: '' });
   const [archetype, setArchetype] = useState<Archetype | null>(null);
@@ -182,7 +195,7 @@ export default function SoulskinFlow() {
               ))}
             </div>
 
-            <div style={{ color: 'var(--violet)', marginBottom: 20 }}>{QUESTIONS[step - 1].icon}</div>
+            <div style={{ color: 'var(--violet)', marginBottom: 20 }}>{QUESTION_ICONS[QUESTIONS[step - 1].key]}</div>
             <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', marginBottom: 8 }}>
               {QUESTIONS[step - 1].emoji} {QUESTIONS[step - 1].question}
             </h2>

@@ -25,6 +25,7 @@ class User(Base, TimestampMixin, SoftDeleteMixin):
     role: Mapped[UserRole] = mapped_column(String(50), nullable=False)
     first_name: Mapped[str] = mapped_column(String(100), nullable=False)
     last_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    google_id: Mapped[str | None] = mapped_column(String(128), unique=True, nullable=True, index=True)
     avatar_url: Mapped[str | None] = mapped_column(Text)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)

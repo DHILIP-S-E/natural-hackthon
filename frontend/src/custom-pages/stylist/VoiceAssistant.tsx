@@ -6,6 +6,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mic, MicOff, Volume2, Globe, MessageSquare, Loader } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import api from '../../config/api';
 import { useAuthStore } from '../../stores/authStore';
 
@@ -18,7 +19,7 @@ interface VoiceResponse {
   language_name: string;
 }
 
-const LANGUAGES = [
+const DEFAULT_LANGUAGES = [
   { code: 'en-IN', api_code: 'en', label: 'English' },
   { code: 'ta-IN', api_code: 'ta', label: 'Tamil' },
   { code: 'te-IN', api_code: 'te', label: 'Telugu' },
@@ -45,6 +46,14 @@ const EXAMPLE_QUERIES = [
 
 export default function VoiceAssistant() {
   const { user } = useAuthStore();
+
+  const { data: langData } = useQuery<{ languages: typeof DEFAULT_LANGUAGES }>({
+    queryKey: ['config', 'voice-languages'],
+    queryFn: () => api.get('/config/voice-languages').then(r => r.data?.data),
+    staleTime: Infinity,
+  });
+  const LANGUAGES = langData?.languages ?? DEFAULT_LANGUAGES;
+
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [response, setResponse] = useState<VoiceResponse | null>(null);

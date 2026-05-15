@@ -1,12 +1,12 @@
-"""Database session and engine — async SQLAlchemy 2.0."""
+"""Database session and engine — async SQLAlchemy 2.0 (PostgreSQL only)."""
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import MetaData, func, event
+from sqlalchemy import MetaData, func
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import DateTime, JSON, Text
-from sqlalchemy.types import TypeDecorator
+from sqlalchemy import DateTime
 
 from utils.secrets import settings
 
@@ -19,25 +19,21 @@ convention = {
 }
 
 metadata = MetaData(naming_convention=convention)
-is_sqlite = settings.DATABASE_URL.startswith("sqlite")
 
-engine_kwargs = {"echo": settings.DEBUG, "pool_pre_ping": True}
-if not is_sqlite:
-    engine_kwargs["pool_size"] = 2
-    engine_kwargs["max_overflow"] = 3
-if is_sqlite:
-    engine_kwargs["connect_args"] = {"check_same_thread": False}
-
-engine = create_async_engine(settings.DATABASE_URL, **engine_kwargs)
-
-if is_sqlite:
-    @event.listens_for(engine.sync_engine, "connect")
-    def set_sqlite_pragma(dbapi_connection, connection_record):
-        cursor = dbapi_connection.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
+engine = create_async_engine(
+    settings.DATABASE_URL,
+    echo=settings.DEBUG,
+    pool_pre_ping=True,
+    pool_size=2,
+    max_overflow=3,
+    connect_args={"statement_cache_size": 0},
+)
 
 async_session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+FlexibleJSON = JSONB
+FlexibleARRAY = JSONB
+FlexibleEnum = None
 
 
 class Base(DeclarativeBase):
@@ -71,37 +67,6 @@ def enum_val(v):
     if v is None:
         return None
     return v.value if hasattr(v, "value") else str(v)
-
-
-if is_sqlite:
-    FlexibleJSON = JSON
-    FlexibleARRAY = JSON
-
-    class FlexibleEnum(TypeDecorator):
-        impl = Text
-        cache_ok = True
-
-        def __init__(self, enum_class, **kw):
-            super().__init__(**kw)
-            self.enum_class = enum_class
-
-        def process_bind_param(self, value, dialect):
-            if value is None:
-                return None
-            return value.value if hasattr(value, "value") else str(value)
-
-        def process_result_value(self, value, dialect):
-            if value is None:
-                return None
-            try:
-                return self.enum_class(value)
-            except (ValueError, KeyError):
-                return value
-else:
-    from sqlalchemy.dialects.postgresql import JSONB
-    FlexibleJSON = JSONB
-    FlexibleARRAY = None
-    FlexibleEnum = None
 
 
 async def get_db() -> AsyncSession:

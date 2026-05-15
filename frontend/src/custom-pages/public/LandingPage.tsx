@@ -1,17 +1,21 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useInView, useMotionValue, useSpring } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
 import ChatbotWidget from '../shared/ChatbotWidget';
 import { Brain, TrendingUp, Eye, Heart, Zap, Palette, Users, BarChart3, ArrowRight, Shield, Wifi, Sparkles } from 'lucide-react';
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
 /* ────────────────────────────────────────────────
    DATA
 ─────────────────────────────────────────────────*/
-const STATS = [
+const DEFAULT_STATS = [
   { value: '750+', label: 'Salon Locations' },
-  { value: '8', label: 'AI Modules' },
-  { value: '6', label: 'User Roles' },
-  { value: '∞', label: 'Possibilities' },
+  { value: '8',    label: 'AI Modules' },
+  { value: '6',    label: 'User Roles' },
+  { value: '∞',    label: 'Possibilities' },
 ];
 
 const INTELLIGENCE_LAYERS = [
@@ -116,6 +120,21 @@ function MagneticBtn({ children, to, href, ghost = false }: { children: React.Re
    MAIN PAGE
 ─────────────────────────────────────────────────*/
 export default function LandingPage() {
+  const { data: platformStats } = useQuery<{ salon_count: string; ai_modules: string; user_roles: string }>({
+    queryKey: ['config', 'platform-stats'],
+    queryFn: () => axios.get(`${API_BASE}/config/platform-stats`).then(r => r.data?.data),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const STATS = platformStats
+    ? [
+        { value: platformStats.salon_count, label: 'Salon Locations' },
+        { value: platformStats.ai_modules,  label: 'AI Modules' },
+        { value: platformStats.user_roles,  label: 'User Roles' },
+        { value: '∞',                       label: 'Possibilities' },
+      ]
+    : DEFAULT_STATS;
+
   const [taglineIndex, setTaglineIndex] = useState(0);
   const taglines = [
     { line1: 'Every Salon Visit.', line2: 'Every Soul, Understood.' },
