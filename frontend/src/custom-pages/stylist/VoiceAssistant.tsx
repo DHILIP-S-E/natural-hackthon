@@ -26,7 +26,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Mic, MicOff, Volume2, Globe, MessageSquare, Loader } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../config/api';
-import { useAuthStore } from '../../stores/authStore';
 
 interface VoiceResponse {
   transcript: string;
@@ -63,8 +62,6 @@ const EXAMPLE_QUERIES = [
 ];
 
 export default function VoiceAssistant() {
-  const { user: _user } = useAuthStore();
-
   const { data: langData } = useQuery<{ languages: typeof DEFAULT_LANGUAGES }>({
     queryKey: ['config', 'voice-languages'],
     queryFn: () => api.get('/config/voice-languages').then(r => r.data?.data),
@@ -126,17 +123,6 @@ export default function VoiceAssistant() {
     setIsListening(false);
   }, []);
 
-  const _handleMicButton = useCallback(() => {
-    if (isListening) {
-      stopListening();
-      // Auto-submit when mic is released
-      setTimeout(() => {
-        if (transcript) submitQuery();
-      }, 100);
-    } else {
-      startListening();
-    }
-  }, [isListening, transcript, startListening, stopListening]);
 
   const submitQuery = useCallback(async () => {
     if (!transcript.trim()) return;

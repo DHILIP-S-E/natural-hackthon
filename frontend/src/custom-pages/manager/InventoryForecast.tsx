@@ -22,12 +22,6 @@ interface InventoryItem {
   days_until_stockout: number;
 }
 
-interface FestivalEvent {
-  month: number;
-  day: number;
-  name: string;
-  demand_multiplier: number;
-}
 
 const STOCK_STATUS = (item: InventoryItem): { label: string; color: string; bg: string } => {
   const days = item.days_until_stockout || 99;

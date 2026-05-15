@@ -108,7 +108,7 @@ function TimelineEntry({ entry, index }: { entry: any; index: number }) {
 
 export default function BeautyTwinTimeline() {
   const { user } = useAuthStore()
-  const customerId = user?.customer_profile_id ?? user?.id
+  const customerId = (user as any)?.customer_profile_id ?? user?.id
 
   const { data, isLoading } = useQuery({
     queryKey: ['twin', 'timeline', customerId],

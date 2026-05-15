@@ -1,9 +1,8 @@
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Users, BookOpen, Star, Activity, AlertTriangle, ArrowUpRight, ArrowDownRight, DollarSign, Clock, ShieldCheck, Zap, TrendingUp, ChevronRight, Award, Timer } from 'lucide-react';
+import { Calendar, BookOpen, Star, Activity, ArrowUpRight, ArrowDownRight, DollarSign, Clock, ShieldCheck, Zap, TrendingUp, ChevronRight, Award, Timer } from 'lucide-react';
 import { TiltCard } from '../../components/ui/TiltCard';
-import { InlineSparkle } from '../../components/ui/PremiumBadge';
 import api from '../../config/api';
 import { ARCH_DATA } from '../../constants/archetypes';
 
@@ -37,21 +36,11 @@ export default function ManagerDashboard() {
     staleTime: 10 * 60 * 1000,
   });
 
-  const { data: soulskinData } = useQuery({
-    queryKey: ['analytics', 'soulskin'],
-    queryFn: () => api.get('/analytics/soulskin').then(r => r.data?.data),
-    staleTime: 5 * 60 * 1000,
-  });
 
   const { data: timeMonitor } = useQuery({
     queryKey: ['quality', 'time-monitor'],
     queryFn: () => api.get('/api/v1/agents/track1/branch/time-monitor').then(r => r.data?.data),
     refetchInterval: 30000,
-  });
-
-  const { data: benchmarkData } = useQuery({
-    queryKey: ['quality', 'benchmark'],
-    queryFn: () => api.get('/api/v1/agents/track1/analytics/benchmark').then(r => r.data?.data),
   });
 
   // Build KPI data from API
@@ -111,7 +100,6 @@ export default function ManagerDashboard() {
   }));
 
   // SOULSKIN archetype distribution
-  const archetypeDist = soulskinData?.archetype_distribution || {};
 
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-IN', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });

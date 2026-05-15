@@ -7,7 +7,6 @@ import {
 } from 'lucide-react';
 import api from '../../config/api';
 import BeautyScoreRing from '../../components/BeautyScoreRing';
-import { useAuthStore } from '../../stores/authStore';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ARCH_DATA } from '../../constants/archetypes';
 

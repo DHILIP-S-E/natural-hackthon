@@ -13,7 +13,7 @@ export const authApi = {
     post('/auth/register', data),
 
   refresh: (token: string): Promise<APIResponse<{ access_token: string; refresh_token: string }>> =>
-    post('/auth/refresh', null, { params: { token } } as never),
+    (post as any)('/auth/refresh', null, { params: { token } }),
 
   me: (): Promise<APIResponse<User>> =>
     get('/auth/me'),

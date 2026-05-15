@@ -84,7 +84,7 @@ export default function ConsultationForm() {
   const [result, setResult] = useState<any>(null)
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormData>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema) as any,
     defaultValues: { is_pregnant: false, is_breastfeeding: false, allergy_declaration_signed: false },
   })
 
@@ -160,7 +160,7 @@ export default function ConsultationForm() {
         </div>
         <p className="text-xs text-gray-500 text-center">{STEPS[step]}</p>
 
-        <form onSubmit={handleSubmit((data) => mutation.mutate(data as FormData))}>
+        <form onSubmit={handleSubmit((data) => mutation.mutate(data as unknown as FormData))}>
           <AnimatePresence mode="wait">
             <motion.div
               key={step}

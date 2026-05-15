@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../config/app_colors.dart';
@@ -7,31 +6,11 @@ import '../../core/auth/auth_service.dart';
 import '../../repositories/auth_repository.dart';
 import '../../widgets/common/app_button.dart';
 
-class PhoneLoginPage extends ConsumerStatefulWidget {
+class PhoneLoginPage extends ConsumerWidget {
   const PhoneLoginPage({super.key});
 
   @override
-  ConsumerState<PhoneLoginPage> createState() => _PhoneLoginPageState();
-}
-
-class _PhoneLoginPageState extends ConsumerState<PhoneLoginPage>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabs;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabs = TabController(length: 2, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabs.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
       body: Container(
@@ -44,7 +23,6 @@ class _PhoneLoginPageState extends ConsumerState<PhoneLoginPage>
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Brand
                   Center(
                     child: Container(
                       width: 72,
@@ -66,52 +44,19 @@ class _PhoneLoginPageState extends ConsumerState<PhoneLoginPage>
                           color: const Color(0xFF1A1A2E),
                         ),
                   ),
-                  const SizedBox(height: 28),
-
-                  // Tabs
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.6),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: TabBar(
-                      controller: _tabs,
-                      labelColor: AppColors.primary,
-                      unselectedLabelColor: Colors.grey,
-                      indicator: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primary.withOpacity(0.1),
-                            blurRadius: 8,
-                          )
-                        ],
-                      ),
-                      tabs: const [
-                        Tab(text: 'Mobile'),
-                        Tab(text: 'Email'),
-                      ],
-                    ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Sign in to your account',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
                   ),
-                  const SizedBox(height: 24),
-
-                  SizedBox(
-                    height: 280,
-                    child: TabBarView(
-                      controller: _tabs,
-                      children: const [
-                        _PhoneOtpTab(),
-                        _EmailTab(),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 36),
+                  const _EmailTab(),
+                  const SizedBox(height: 20),
                   _Divider(),
-                  const SizedBox(height: 16),
-                  _GoogleSignInButton(),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
+                  const _GoogleSignInButton(),
+                  const SizedBox(height: 20),
                   Center(
                     child: Text(
                       'By continuing, you agree to our Terms & Privacy Policy',
@@ -126,67 +71,6 @@ class _PhoneLoginPageState extends ConsumerState<PhoneLoginPage>
           ),
         ),
       ),
-    );
-  }
-}
-
-// ── Phone tab (direct login, no OTP) ─────────────────────────────────────────
-
-class _PhoneOtpTab extends ConsumerStatefulWidget {
-  const _PhoneOtpTab();
-
-  @override
-  ConsumerState<_PhoneOtpTab> createState() => _PhoneOtpTabState();
-}
-
-class _PhoneOtpTabState extends ConsumerState<_PhoneOtpTab> {
-  final _phoneCtrl = TextEditingController();
-  bool _isLoading = false;
-  String? _error;
-
-  @override
-  void dispose() {
-    _phoneCtrl.dispose();
-    super.dispose();
-  }
-
-  String get _fullPhone =>
-      '+91${_phoneCtrl.text.trim().replaceAll(RegExp(r'\D'), '')}';
-
-  bool get _phoneValid => _phoneCtrl.text.trim().length == 10;
-
-  Future<void> _login(BuildContext context) async {
-    setState(() { _isLoading = true; _error = null; });
-    try {
-      final result = await ref
-          .read(authRepositoryProvider)
-          .loginPhone(phone: _fullPhone);
-      if (!context.mounted) return;
-      _navigate(context, result);
-    } catch (e) {
-      setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (_error != null) ...[
-          _ErrorBox(_error!),
-          const SizedBox(height: 12),
-        ],
-        _PhoneField(controller: _phoneCtrl, onChanged: (_) => setState(() {})),
-        const SizedBox(height: 20),
-        AppButton(
-          label: 'Continue',
-          isLoading: _isLoading,
-          onPressed: _phoneValid ? () => _login(context) : null,
-        ),
-      ],
     );
   }
 }
@@ -369,59 +253,6 @@ class _ErrorBox extends StatelessWidget {
     );
   }
 }
-
-class _PhoneField extends StatelessWidget {
-  final TextEditingController controller;
-  final ValueChanged<String> onChanged;
-  const _PhoneField({required this.controller, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.aiBubbleBorder),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-            decoration: const BoxDecoration(
-                border: Border(right: BorderSide(color: Color(0xFFEEE6FF)))),
-            child: const Text('🇮🇳 +91',
-                style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1A1A2E))),
-          ),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              keyboardType: TextInputType.phone,
-              maxLength: 10,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: const InputDecoration(
-                hintText: '9876543210',
-                hintStyle: TextStyle(color: Color(0xFFB0A8C0)),
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(horizontal: 14),
-                counterText: '',
-              ),
-              style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF1A1A2E)),
-              onChanged: onChanged,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 
 class _InputBox extends StatelessWidget {
   final TextEditingController controller;

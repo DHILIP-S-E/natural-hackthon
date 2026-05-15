@@ -1,4 +1,4 @@
-import { get, post, put, del } from '../base/api_base';
+import { get, post, put } from '../base/api_base';
 import type { APIResponse } from '../base/base_type';
 import type { Booking } from '../../types/booking/booking_types';
 

@@ -259,13 +259,13 @@ export default function FranchisePerformanceDashboard() {
 
         {/* Branch list */}
         <div className="space-y-2">
-          {view === 'overview' && branches.slice(0, 15).map((b, i) => (
+          {view === 'overview' && branches.slice(0, 15).map((b) => (
             <BranchRow key={b.location_id} branch={b} onClick={() => navigate(`/admin/locations/${b.location_id}`)} />
           ))}
           {view === 'top10' && top10.map((b: Branch, i: number) => (
             <BranchRow key={b.location_id} branch={b} rank={i} onClick={() => navigate(`/admin/locations/${b.location_id}`)} />
           ))}
-          {view === 'bottom10' && bottom10.map((b: Branch, i: number) => (
+          {view === 'bottom10' && bottom10.map((b: Branch) => (
             <BranchRow key={b.location_id} branch={b} onClick={() => navigate(`/admin/locations/${b.location_id}`)} />
           ))}
           {view === 'all' && sortedBranches.map((b, i) => (

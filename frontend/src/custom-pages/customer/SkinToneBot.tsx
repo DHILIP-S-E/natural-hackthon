@@ -5,7 +5,7 @@
  */
 import { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, Upload, Sparkles, CheckCircle, AlertCircle, RefreshCw, Save } from 'lucide-react';
+import { Camera, Upload, Sparkles, AlertCircle, RefreshCw, Save } from 'lucide-react';
 import api from '../../config/api';
 
 interface SkinAnalysis {

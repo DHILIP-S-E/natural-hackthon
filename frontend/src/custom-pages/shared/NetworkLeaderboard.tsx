@@ -46,7 +46,7 @@ export default function NetworkLeaderboard() {
     queryFn: async () => {
       const res = await api.get('/staff?per_page=50');
       const rawList: any[] = res.data?.data?.staff || [];
-      return rawList.map((s, idx) => ({
+      return rawList.map((s) => ({
         id: s.id,
         name: s.name || 'Unknown',
         location_name: s.location_name || '—',
