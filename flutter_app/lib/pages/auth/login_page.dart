@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/api/api_client.dart';
 import '../../core/auth/auth_service.dart';
 import '../../providers/user_provider.dart';
 import '../../repositories/auth_repository.dart';
@@ -117,23 +118,7 @@ class LoginPage extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 12),
-                GridView.count(
-                  crossAxisCount: 2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                  childAspectRatio: 2.2,
-                  children: _kDemoAccounts
-                      .map(
-                        (account) => _DemoLoginCard(
-                          account: account,
-                          isLoading: form.isLoading,
-                          onTap: () => _quickLogin(context, ref, account),
-                        ),
-                      )
-                      .toList(),
-                ),
+                const _DemoLoginGrid(),
                 const SizedBox(height: 16),
               ],
             ),
@@ -181,30 +166,9 @@ class LoginPage extends ConsumerWidget {
     }
   }
 
-  // ── Quick demo login (bypasses text field state) ─────────────────────────
-  Future<void> _quickLogin(
-    BuildContext context,
-    WidgetRef ref,
-    _DemoAccount account,
-  ) async {
-    final notifier = ref.read(authFormProvider.notifier);
-    notifier.setLoading(true);
-    notifier.setError(null);
-    try {
-      await ref
-          .read(authRepositoryProvider)
-          .login(email: account.email, password: _kDemoPassword);
-      if (context.mounted) context.go('/dashboard');
-    } catch (e) {
-      notifier.setError(e.toString());
-    } finally {
-      notifier.setLoading(false);
-    }
-  }
 }
 
 // ── Demo credentials ─────────────────────────────────────────────────────────
-const String _kDemoPassword = 'Aura@2026';
 
 class _DemoAccount {
   final String email;
@@ -220,53 +184,115 @@ class _DemoAccount {
   });
 }
 
-const List<_DemoAccount> _kDemoAccounts = [
-  _DemoAccount(
-    email: 'customer@aura.in',
-    label: 'Customer',
-    icon: '👤',
-    color: Color(0xFF7C6FCD),
-  ),
-  _DemoAccount(
-    email: 'stylist@aura.in',
-    label: 'Stylist',
-    icon: '✂️',
-    color: Color(0xFFC084FC),
-  ),
-  _DemoAccount(
-    email: 'manager@aura.in',
-    label: 'Manager',
-    icon: '🏪',
-    color: Color(0xFF38BDF8),
-  ),
-  _DemoAccount(
-    email: 'owner@aura.in',
-    label: 'Franchise',
-    icon: '🏢',
-    color: Color(0xFF34D399),
-  ),
-  _DemoAccount(
-    email: 'regional@aura.in',
-    label: 'Regional',
-    icon: '🗺️',
-    color: Color(0xFFFB923C),
-  ),
-  _DemoAccount(
-    email: 'super@aura.in',
-    label: 'Super Admin',
-    icon: '⚡',
-    color: Color(0xFFF59E0B),
-  ),
-];
+class _DemoLoginGrid extends ConsumerStatefulWidget {
+  const _DemoLoginGrid();
+
+  @override
+  ConsumerState<_DemoLoginGrid> createState() => _DemoLoginGridState();
+}
+
+class _DemoLoginGridState extends ConsumerState<_DemoLoginGrid> {
+  bool _isLoading = false;
+  bool _fetchingAccounts = true;
+  List<_DemoAccount> _accounts = [];
+  String _password = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchDemoAccounts();
+  }
+
+  Future<void> _fetchDemoAccounts() async {
+    try {
+      final client = ref.read(apiClientProvider);
+      final response = await client.get<Map<String, dynamic>>('/auth/demo-credentials');
+      final data = response.data!['data'];
+      final accountsList = data['accounts'] as List;
+      
+      if (mounted) {
+        setState(() {
+          _password = data['password'] as String;
+          _accounts = accountsList.map((acc) {
+            final colorHex = acc['color'].toString().replaceFirst('#', 'FF');
+            return _DemoAccount(
+              email: acc['email'],
+              label: acc['label'],
+              icon: acc['icon'],
+              color: Color(int.parse(colorHex, radix: 16)),
+            );
+          }).toList();
+          _fetchingAccounts = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _fetchingAccounts = false);
+      }
+    }
+  }
+
+  Future<void> _quickLogin(BuildContext context, _DemoAccount account) async {
+    setState(() => _isLoading = true);
+    try {
+      await ref.read(authRepositoryProvider).login(
+            email: account.email,
+            password: _password,
+          );
+      if (context.mounted) context.go('/dashboard');
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_fetchingAccounts) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(16.0),
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+    
+    if (_accounts.isEmpty) return const SizedBox.shrink();
+
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisSpacing: 10,
+      mainAxisSpacing: 10,
+      childAspectRatio: 2.2,
+      children: _accounts.map((account) {
+        return _DemoLoginCard(
+          account: account,
+          demoPassword: _password,
+          isLoading: _isLoading,
+          onTap: () => _quickLogin(context, account),
+        );
+      }).toList(),
+    );
+  }
+}
 
 // ── Demo Login Card ───────────────────────────────────────────────────────────
 class _DemoLoginCard extends StatefulWidget {
   final _DemoAccount account;
+  final String demoPassword;
   final bool isLoading;
   final VoidCallback onTap;
 
   const _DemoLoginCard({
     required this.account,
+    required this.demoPassword,
     required this.isLoading,
     required this.onTap,
   });
@@ -341,7 +367,7 @@ class _DemoLoginCardState extends State<_DemoLoginCard> {
                 overflow: TextOverflow.ellipsis,
               ),
               Text(
-                '🔑 $_kDemoPassword',
+                '🔑 ${widget.demoPassword}',
                 style: TextStyle(
                   fontSize: 9,
                   color: Theme.of(context).colorScheme.outline,

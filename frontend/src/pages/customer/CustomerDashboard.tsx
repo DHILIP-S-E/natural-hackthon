@@ -56,9 +56,9 @@ export default function CustomerDashboard() {
     name: p.profile.name || `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || '',
     beautyScore: p.profile.beauty_score ?? 0,
     passport: p.profile.passport_completeness ?? 0,
-    hair: p.hair || { type: '--', texture: '--', color: '--', damage: 0 },
-    skin: p.skin || { type: '--', tone: '--', undertone: '--', concerns: [] },
-    archetype: p.profile.dominant_archetype || 'bloom',
+    hair: p.hair || { type: 'Not Analyzed', texture: 'Not Analyzed', color: 'Not Analyzed', damage: null },
+    skin: p.skin || { type: 'Not Analyzed', tone: 'Not Analyzed', undertone: 'Not Analyzed', concerns: [] },
+    archetype: p.profile.dominant_archetype || null,
     allergies: p.profile.known_allergies || [],
     goal: p.profile.primary_goal || '',
     goalProgress: p.profile.goal_progress_pct ?? 0,
@@ -71,9 +71,9 @@ export default function CustomerDashboard() {
   } : {
     name: `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || '',
     beautyScore: 0, passport: 0,
-    hair: { type: '--', texture: '--', color: '--', damage: 0 },
-    skin: { type: '--', tone: '--', undertone: '--', concerns: [] as string[] },
-    archetype: 'bloom' as const,
+    hair: { type: 'Not Analyzed', texture: 'Not Analyzed', color: 'Not Analyzed', damage: null },
+    skin: { type: 'Not Analyzed', tone: 'Not Analyzed', undertone: 'Not Analyzed', concerns: [] as string[] },
+    archetype: null,
     allergies: [] as string[],
     goal: '', goalProgress: 0,
     visits: 0, ltv: 0,
@@ -84,7 +84,7 @@ export default function CustomerDashboard() {
   const JOURNEY = (p?.last_5_services || []).map((b: any) => ({
     date: b.date ? new Date(b.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '',
     service: b.service_name || 'Service',
-    archetype: b.archetype_applied || 'bloom',
+    archetype: b.archetype_applied || null,
     rating: b.quality_score ? Math.round(b.quality_score / 20) : 5,
   }));
 
@@ -108,7 +108,7 @@ export default function CustomerDashboard() {
               <h1 style={{ fontSize: '2rem', fontWeight: 700, color: '#1A1A24', letterSpacing: '-0.01em' }}>{CUSTOMER.name}</h1>
             )}
             <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-              {(() => {
+              {CUSTOMER.archetype && (() => {
                 const arch = ARCH_DATA[CUSTOMER.archetype] || ARCH_DATA.bloom;
                 const Icon = arch.icon;
                 return (
@@ -118,9 +118,11 @@ export default function CustomerDashboard() {
                 );
               })()}
               <span className="badge badge-teal" style={{ padding: '5px 12px', fontWeight: 600 }}>{CUSTOMER.visits} visits</span>
-              <div style={{ background: 'rgba(155,127,212,0.1)', border: '1px solid rgba(155,127,212,0.2)', color: '#9B7FD4', padding: '5px 12px', borderRadius: 'var(--radius-full)', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Sparkles size={12} /> Digital Twin Active
-              </div>
+              {p?.profile?.has_digital_twin && (
+                <div style={{ background: 'rgba(155,127,212,0.1)', border: '1px solid rgba(155,127,212,0.2)', color: '#9B7FD4', padding: '5px 12px', borderRadius: 'var(--radius-full)', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Sparkles size={12} /> Digital Twin Active
+                </div>
+              )}
               {loyaltyData?.tier && (
                 <div style={{ background: 'rgba(201,169,110,0.1)', border: '1px solid rgba(201,169,110,0.25)', color: '#C9A96E', padding: '5px 12px', borderRadius: 'var(--radius-full)', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <Trophy size={12} /> {loyaltyData.tier.charAt(0).toUpperCase() + loyaltyData.tier.slice(1)} · {loyaltyData.total_points?.toLocaleString()} pts
@@ -185,7 +187,7 @@ export default function CustomerDashboard() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 'var(--space-md)' }}>
         {[
           { label: 'Next Visit', value: rec?.suggested_date_window?.split(' ')[1] || 'TBD', icon: Calendar, color: '#2A9D8F' },
-          { label: 'Confidence', value: `${(CUSTOMER.beautyScore ?? 0) + 10}%`, icon: TrendingUp, color: '#f44f9a' },
+          { label: 'Confidence', value: `${CUSTOMER.beautyScore ?? 0}%`, icon: TrendingUp, color: '#f44f9a' },
           { label: 'Passport', value: `${CUSTOMER.passport}%`, icon: Award, color: '#9B99B0' },
           { label: 'Journal', value: `${(p?.soulskin?.history ?? []).length}`, icon: Heart, color: '#E8A87C' },
         ].map((k, i) => {
@@ -282,7 +284,7 @@ export default function CustomerDashboard() {
                     { l: 'Type', v: CUSTOMER.hair.type },
                     { l: 'Texture', v: CUSTOMER.hair.texture },
                     { l: 'Color', v: CUSTOMER.hair.color },
-                    { l: 'Damage Level', v: `${CUSTOMER.hair.damage}/5` },
+                    { l: 'Damage Level', v: CUSTOMER.hair.damage !== null ? `${CUSTOMER.hair.damage}/5` : 'Not Analyzed' },
                   ].map((f, i) => (
                     <div key={i}>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: 2 }}>{f.l}</div>
@@ -305,7 +307,7 @@ export default function CustomerDashboard() {
                     { l: 'Type', v: CUSTOMER.skin.type },
                     { l: 'Tone', v: CUSTOMER.skin.tone },
                     { l: 'Undertone', v: CUSTOMER.skin.undertone },
-                    { l: 'Concerns', v: CUSTOMER.skin.concerns.join(', ') },
+                    { l: 'Concerns', v: CUSTOMER.skin.concerns.length > 0 ? CUSTOMER.skin.concerns.join(', ') : 'None' },
                   ].map((f, i) => (
                     <div key={i}>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: 2 }}>{f.l}</div>

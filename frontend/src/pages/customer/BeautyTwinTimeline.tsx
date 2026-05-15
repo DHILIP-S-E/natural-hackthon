@@ -11,7 +11,7 @@ const GRADE_CONFIG = {
 }
 
 function HealthGauge({ score, grade }: { score: number; grade: string }) {
-  const config = GRADE_CONFIG[grade as keyof typeof GRADE_CONFIG] ?? GRADE_CONFIG['Good']
+  const config = GRADE_CONFIG[grade as keyof typeof GRADE_CONFIG] ?? { color: '#9B99B0', bg: 'bg-gray-400/10 border-gray-400/20' }
   const r = 70
   const circ = 2 * Math.PI * r
   const filled = (score / 100) * circ
@@ -128,7 +128,7 @@ export default function BeautyTwinTimeline() {
   }
 
   const score = data?.health_score ?? 0
-  const grade = data?.grade ?? 'Good'
+  const grade = data?.grade ?? 'Not Analyzed'
   const breakdown = data?.breakdown ?? {}
   const narrative = data?.ai_narrative ?? ''
   const timeline: any[] = data?.timeline ?? []

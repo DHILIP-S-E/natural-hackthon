@@ -166,7 +166,7 @@ export default function LoginPage() {
               <Sparkles size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> Quick Demo Login
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-              {DEMO_ACCOUNTS.map(d => (
+              {demoAccounts.map(d => (
                 <button key={d.email} className="btn btn-ghost btn-sm" disabled={loading}
                   onClick={() => handleDemo(d.email)}
                   style={{ fontSize: '0.75rem' }}>
