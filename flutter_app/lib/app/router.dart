@@ -11,6 +11,9 @@ import '../pages/tempo/home_page.dart';
 import '../pages/auth/signup_page.dart';
 import '../pages/tempo/chat_page.dart';
 import '../pages/tempo/voice_page.dart';
+import '../pages/tempo/bookings_page.dart';
+import '../pages/tempo/beauty_pass_page.dart';
+import '../pages/tempo/passport_page.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authService = ref.watch(authServiceProvider);
@@ -69,6 +72,20 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/tempo/voice',
         pageBuilder: (context, state) =>
             _slide(state, const TempoVoicePage()),
+      GoRoute(
+        path: '/tempo/bookings',
+        pageBuilder: (context, state) =>
+            _slide(state, const BookingsPage()),
+      ),
+      GoRoute(
+        path: '/tempo/pass',
+        pageBuilder: (context, state) =>
+            _slide(state, const BeautyPassPage()),
+      ),
+      GoRoute(
+        path: '/tempo/passport',
+        pageBuilder: (context, state) =>
+            _slide(state, const PassportPage()),
       ),
     ],
   );

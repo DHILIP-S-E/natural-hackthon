@@ -8,7 +8,7 @@ class ChatNotifier extends StateNotifier<List<Message>> {
     Message(
       id: '1',
       text:
-          "Hello Araf,\nyou've not been lately drinking water properly and missing out your habit.\n\nLet's get back on track!",
+          "Hello there,\nyou've not been lately drinking water properly and missing out your habit.\n\nLet's get back on track!",
       sender: MessageSender.ai,
       timestamp: DateTime.now().subtract(const Duration(minutes: 10)),
     ),

@@ -425,24 +425,56 @@ class _CameraViewfinder extends StatelessWidget {
         borderRadius: BorderRadius.circular(23),
         child: Stack(
           children: [
-            // Face frame
-            Center(
-              child: AnimatedBuilder(
-                animation: pulseCtrl,
-                builder: (_, __) => Container(
-                  width: 120,
-                  height: 140,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(60),
-                    border: Border.all(
-                      color: AppColors.primary
-                          .withOpacity(0.3 + 0.4 * pulseCtrl.value),
-                      width: 1.5,
+            // AI Listening Waveform / Orb
+            if (isListening)
+              Center(
+                child: AnimatedBuilder(
+                  animation: pulseCtrl,
+                  builder: (_, __) {
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(5, (index) {
+                        final delay = index * 0.2;
+                        final val = math.sin((pulseCtrl.value * math.pi * 2) + delay);
+                        final height = 20.0 + (val.abs() * 40.0);
+                        return Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          width: 4,
+                          height: height,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFC9A96E),
+                            borderRadius: BorderRadius.circular(2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFC9A96E).withOpacity(0.5),
+                                blurRadius: 10,
+                              )
+                            ],
+                          ),
+                        );
+                      }),
+                    );
+                  },
+                ),
+              )
+            else
+              Center(
+                child: AnimatedBuilder(
+                  animation: pulseCtrl,
+                  builder: (_, __) => Container(
+                    width: 120,
+                    height: 140,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(60),
+                      border: Border.all(
+                        color: const Color(0xFFC9A96E)
+                            .withOpacity(0.3 + 0.4 * pulseCtrl.value),
+                        width: 1.5,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
             // Scan line
             AnimatedBuilder(
               animation: scanCtrl,
@@ -458,7 +490,7 @@ class _CameraViewfinder extends StatelessWidget {
                       gradient: LinearGradient(
                         colors: [
                           Colors.transparent,
-                          AppColors.primary.withOpacity(0.7),
+                          const Color(0xFFC9A96E).withOpacity(0.7),
                           Colors.transparent,
                         ],
                       ),
@@ -476,7 +508,7 @@ class _CameraViewfinder extends StatelessWidget {
               child: Text(
                 'AI VISION',
                 style: TextStyle(
-                  color: Color(0xFF7C3AED),
+                  color: Color(0xFFC9A96E),
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 1.2,
@@ -516,7 +548,7 @@ class _CameraViewfinder extends StatelessWidget {
   List<Widget> _corners() {
     const size = 16.0;
     const thick = 2.0;
-    const color = Color(0xFF7C3AED);
+    const color = Color(0xFFC9A96E);
     return [
       _corner(top: 10, left: 10, size: size, thick: thick, color: color,
           topLeft: true),
