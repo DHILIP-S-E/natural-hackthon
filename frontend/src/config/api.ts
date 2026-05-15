@@ -6,12 +6,6 @@ const api = axios.create({
   timeout: 15000,
 });
 
-// Supabase client for direct storage/auth if needed
-export const supabaseConfig = {
-  url: import.meta.env.VITE_SUPABASE_URL || '',
-  anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || '',
-};
-
 // Request interceptor — attach JWT
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('aura_token');

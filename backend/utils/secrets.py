@@ -11,10 +11,6 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str = "postgresql+asyncpg://postgres:password@localhost:5432/postgres"
 
-    SUPABASE_URL: str = ""
-    SUPABASE_ANON_KEY: str = ""
-    SUPABASE_SERVICE_KEY: str = ""
-
     JWT_SECRET_KEY: str = "change-this-secret-key-in-production"
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
@@ -24,13 +20,8 @@ class Settings(BaseSettings):
 
     CORS_ORIGINS: str = "http://localhost:5173,https://natural-hackthon-iohb.vercel.app,https://natural.dhilip.in"
 
-    STORAGE_BACKEND: str = "minio"
-    STORAGE_ENDPOINT: str = ""
-    STORAGE_ACCESS_KEY: str = ""
-    STORAGE_SECRET_KEY: str = ""
-    STORAGE_BUCKET: str = "aura-uploads"
-    STORAGE_REGION: str = "ap-south-1"
-    STORAGE_USE_SSL: bool = False
+    FIREBASE_SERVICE_ACCOUNT_PATH: str = "firebase-service-account.json"
+    FIREBASE_STORAGE_BUCKET: str = ""
 
     AI_PROVIDER: str = "gemini"
     OPENAI_API_KEY: str = ""
@@ -47,6 +38,7 @@ class Settings(BaseSettings):
     AWS_SNS_WHATSAPP_SENDER_ID: str = ""
     AWS_SNS_PLATFORM_ARN: str = ""
 
+    GOOGLE_CLIENT_ID: str = ""
     GOOGLE_MAPS_API_KEY: str = ""
 
     SMTP_HOST: str = ""

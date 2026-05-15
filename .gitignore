@@ -1,3 +1,7 @@
+## Secrets
+backend/firebase-service-account.json
+backend/.env
+
 ## Python
 __pycache__/
 *.py[cod]
@@ -53,9 +57,10 @@ build/
 .DS_Store
 Thumbs.db
 
-## Env files
+## Env files — keep .env.example committed
 *.env
 *.env.*
+!*.env.example
 
 ## Python virtualenvs under project
 backend/.venv/
