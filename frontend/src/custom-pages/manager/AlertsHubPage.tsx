@@ -122,7 +122,7 @@ export default function AlertsHubPage() {
                 </div>
               </TiltCard>
             );
-          ) : (
+          }) : (
             <EmptyState text="No quality flags — all scores above threshold" />
           )}
         </motion.div>

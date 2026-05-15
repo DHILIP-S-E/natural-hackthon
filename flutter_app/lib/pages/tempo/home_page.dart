@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../config/app_colors.dart';
 import '../../providers/chat_provider.dart';
 import '../../widgets/tempo/gradient_button.dart';
+import '../beautrix/beautrix_live_page.dart';
 
 class TempoHomePage extends ConsumerWidget {
   const TempoHomePage({super.key});
@@ -241,7 +242,14 @@ class _BottomNav extends StatelessWidget {
           final isCenter = i == 2;
 
           return GestureDetector(
-            onTap: () {},
+            onTap: isCenter
+                ? () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const BeautrixLivePage(),
+                        fullscreenDialog: true,
+                      ),
+                    )
+                : () {},
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [

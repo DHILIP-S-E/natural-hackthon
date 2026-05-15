@@ -10,7 +10,10 @@ final authServiceProvider = Provider<AuthService>((ref) {
 
 class AuthService {
   final LocalStorage _storage;
-  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: ['email', 'profile'],
+    serverClientId: '1030181775683-p11755h362h8ra0qe9p47jdhpi7canqg.apps.googleusercontent.com',
+  );
 
   AuthService(this._storage);
 

@@ -3,6 +3,24 @@
  * Button-press activation (never always-on). Multi-language support.
  * Web Speech API → backend intent parsing → spoken response.
  */
+
+// Web Speech API type declarations (not in lib.dom.d.ts for all targets)
+declare class SpeechRecognition extends EventTarget {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  onend: (() => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
+  start(): void;
+  stop(): void;
+}
+declare class SpeechRecognitionEvent extends Event {
+  results: SpeechRecognitionResultList;
+}
+declare class SpeechRecognitionErrorEvent extends Event {
+  error: string;
+}
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mic, MicOff, Volume2, Globe, MessageSquare, Loader } from 'lucide-react';
@@ -45,7 +63,7 @@ const EXAMPLE_QUERIES = [
 ];
 
 export default function VoiceAssistant() {
-  const { user } = useAuthStore();
+  const { user: _user } = useAuthStore();
 
   const { data: langData } = useQuery<{ languages: typeof DEFAULT_LANGUAGES }>({
     queryKey: ['config', 'voice-languages'],
@@ -108,7 +126,7 @@ export default function VoiceAssistant() {
     setIsListening(false);
   }, []);
 
-  const handleMicButton = useCallback(() => {
+  const _handleMicButton = useCallback(() => {
     if (isListening) {
       stopListening();
       // Auto-submit when mic is released

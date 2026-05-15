@@ -11,7 +11,7 @@ class AppTheme {
       border: OutlineInputBorder(),
       filled: true,
     ),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ),
@@ -27,7 +27,7 @@ class AppTheme {
       border: OutlineInputBorder(),
       filled: true,
     ),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ),

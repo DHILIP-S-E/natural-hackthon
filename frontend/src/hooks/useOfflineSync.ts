@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { enqueueWrite, startOnlineSyncListener, getPendingCount, QueuedWrite } from '../lib/offlineDb'
+import { enqueueWrite, startOnlineSyncListener, getPendingCount } from '../lib/offlineDb'
+import type { QueuedWrite } from '../lib/offlineDb'
 import api from '../config/api'
 
 async function replayWrite(write: QueuedWrite): Promise<void> {

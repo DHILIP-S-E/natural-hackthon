@@ -26,11 +26,6 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        // Background sync queue for offline writes
-        backgroundSync: {
-          name: 'aura-write-queue',
-          options: { maxRetentionTime: 24 * 60 }, // 24 hours
-        },
         runtimeCaching: [
           // Critical read-only data — CacheFirst, longer TTL
           {

@@ -41,7 +41,16 @@
       "PowerShell(cd c:\\\\github\\\\natural\\\\backend; python seed_users.py 2>&1 | Where-Object { $_ -notmatch 'RequestsDependencyWarning|urllib3|chardet|warnings.warn|UserWarning|model_data' })",
       "Bash(docker compose *)",
       "Bash(uvicorn main:app --reload --port 8000)",
-      "Bash(flutter create *)"
+      "Bash(flutter create *)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('Endpoint reachable, response:', d.get\\('detail','ok'\\)\\)\")",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\github\\\\natural\\\\flutter_app\\\\lib\" -Recurse -File | ForEach-Object { $_.FullName -replace [regex]::Escape\\(\"C:\\\\github\\\\natural\\\\flutter_app\\\\lib\"\\), \"lib\" } | Sort-Object)",
+      "Bash(git commit *)",
+      "PowerShell(keytool -list -v -keystore \"$env:USERPROFILE\\\\.android\\\\debug.keystore\" -alias androiddebugkey -storepass android -keypass android 2>&1 | Select-String \"SHA1\")",
+      "PowerShell(& \"C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr\\\\bin\\\\keytool.exe\" -list -v -keystore \"$env:USERPROFILE\\\\.android\\\\debug.keystore\" -alias androiddebugkey -storepass android -keypass android 2>&1 | Select-String \"SHA1|SHA-1\")",
+      "PowerShell(Get-Process | Where-Object { $_.Name -match \"python|uvicorn|flutter|dart\" } | Select-Object Name, Id, CPU, WorkingSet 2>&1)",
+      "PowerShell(netstat -ano)",
+      "PowerShell(Get-Process -Id 38120)",
+      "PowerShell(Get-Process -Id 25748)"
     ]
   }
 }

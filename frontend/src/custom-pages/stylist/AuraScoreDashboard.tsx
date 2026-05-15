@@ -69,7 +69,7 @@ export default function AuraScoreDashboard() {
   const { user } = useAuthStore()
 
   // For stylist: fetch own score. For manager: fetch branch leaderboard
-  const stylistId = user?.staff_profile_id || user?.id
+  const stylistId = (user as any)?.staff_profile_id || user?.id
   const isManager = user?.role === 'salon_manager' || user?.role === 'super_admin' || user?.role === 'regional_manager'
 
   const { data: scoreData } = useQuery({

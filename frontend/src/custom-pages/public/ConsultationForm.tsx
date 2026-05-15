@@ -153,14 +153,14 @@ export default function ConsultationForm() {
 
         {/* Progress */}
         <div className="flex gap-1">
-          {STEPS.map((s, i) => (
+          {STEPS.map((s: string, i: number) => (
             <div key={s} className={`h-1 flex-1 rounded-full transition-colors
               ${i <= step ? 'bg-[#C9A96E]' : 'bg-white/10'}`} />
           ))}
         </div>
         <p className="text-xs text-gray-500 text-center">{STEPS[step]}</p>
 
-        <form onSubmit={handleSubmit(data => mutation.mutate(data))}>
+        <form onSubmit={handleSubmit((data) => mutation.mutate(data as FormData))}>
           <AnimatePresence mode="wait">
             <motion.div
               key={step}

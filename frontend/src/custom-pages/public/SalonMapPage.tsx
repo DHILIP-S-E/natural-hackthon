@@ -30,8 +30,10 @@ interface Salon {
 
 export default function SalonMapPage() {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstance = useRef<google.maps.Map | null>(null);
-  const markersRef = useRef<google.maps.Marker[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const mapInstance = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const markersRef = useRef<any[]>([]);
 
   const [salons, setSalons] = useState<Salon[]>([]);
   const [filtered, setFiltered] = useState<Salon[]>([]);
@@ -47,7 +49,7 @@ export default function SalonMapPage() {
 
   // Load Google Maps script
   useEffect(() => {
-    if (window.google?.maps) { setMapsLoaded(true); return; }
+    if ((window as any).google?.maps) { setMapsLoaded(true); return; }
     if (!MAPS_KEY) { setMapsLoaded(true); return; }
     const script = document.createElement('script');
     script.src = `https://maps.googleapis.com/maps/api/js?key=${MAPS_KEY}&libraries=places`;
@@ -106,9 +108,9 @@ export default function SalonMapPage() {
 
   // Initialize map
   useEffect(() => {
-    if (!mapsLoaded || !mapRef.current || !window.google?.maps) return;
+    if (!mapsLoaded || !mapRef.current || !(window as any).google?.maps) return;
     const center = userLocation || { lat: 13.0827, lng: 80.2707 };
-    mapInstance.current = new google.maps.Map(mapRef.current, {
+    mapInstance.current = new (window as any).google.maps.Map(mapRef.current, {
       center,
       zoom: 12,
       styles: [
@@ -123,17 +125,18 @@ export default function SalonMapPage() {
 
   // Place markers
   useEffect(() => {
-    if (!mapInstance.current || !window.google?.maps) return;
+    const g = (window as any).google;
+    if (!mapInstance.current || !g?.maps) return;
     markersRef.current.forEach(m => m.setMap(null));
     markersRef.current = [];
 
     filtered.forEach(salon => {
-      const marker = new google.maps.Marker({
+      const marker = new g.maps.Marker({
         position: { lat: salon.lat, lng: salon.lng },
         map: mapInstance.current!,
         title: salon.name,
         icon: {
-          path: google.maps.SymbolPath.CIRCLE,
+          path: g.maps.SymbolPath.CIRCLE,
           scale: salon.is_busy ? 10 : 8,
           fillColor: salon.is_busy ? '#ef4444' : '#22c55e',
           fillOpacity: 1,

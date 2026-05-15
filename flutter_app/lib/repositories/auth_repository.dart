@@ -19,6 +19,50 @@ class AuthRepository {
 
   AuthRepository(this._client, this._authService, this._storage);
 
+  /// Send OTP to phone number.
+  Future<void> sendOtp({required String phone}) async {
+    await _client.post<Map<String, dynamic>>(
+      Endpoints.sendOtp,
+      data: {'phone': phone},
+    );
+  }
+
+  /// Verify OTP — returns same map as loginPhone.
+  Future<Map<String, dynamic>> verifyOtp({
+    required String phone,
+    required String otp,
+  }) async {
+    final response = await _client.post<Map<String, dynamic>>(
+      Endpoints.verifyOtp,
+      data: {'phone': phone, 'otp': otp},
+    );
+    final data = response.data!;
+    await _authService.saveTokens(
+      token: data['jwt_token'] as String,
+      refreshToken: data['refresh_token'] as String? ?? '',
+    );
+    await _storage.setString(AppConstants.userKey, data['customer_id'] as String);
+    return data;
+  }
+
+  /// Email + password login.
+  Future<Map<String, dynamic>> loginEmail({
+    required String email,
+    required String password,
+  }) async {
+    final response = await _client.post<Map<String, dynamic>>(
+      Endpoints.loginEmail,
+      data: {'email': email, 'password': password},
+    );
+    final data = response.data!;
+    await _authService.saveTokens(
+      token: data['jwt_token'] as String,
+      refreshToken: data['refresh_token'] as String? ?? '',
+    );
+    await _storage.setString(AppConstants.userKey, data['customer_id'] as String);
+    return data;
+  }
+
   /// Phone login (no OTP). Returns map with is_new_customer + face_scan_required.
   Future<Map<String, dynamic>> loginPhone({required String phone}) async {
     final response = await _client.post<Map<String, dynamic>>(

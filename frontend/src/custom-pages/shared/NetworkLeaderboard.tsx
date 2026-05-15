@@ -5,7 +5,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
-import { Award, AlertTriangle, Star } from 'lucide-react';
+import { Award, AlertTriangle } from 'lucide-react';
 import api from '../../config/api';
 
 interface StaffEntry {
@@ -140,12 +140,12 @@ export default function NetworkLeaderboard() {
 
         {/* Full Leaderboard */}
         <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-          {filtered.map((s, idx) => {
+          {filtered.map((s, _idx) => {
             const risk = RISK_STYLES[s.risk_label] || RISK_STYLES.low;
             return (
-              <motion.div key={s.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.03 }} style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', gap: 14 }}>
-                <div style={{ width: 36, textAlign: 'center', fontSize: 14, fontWeight: 700, color: idx < 3 ? '#C9A96E' : 'rgba(255,255,255,0.3)', flexShrink: 0 }}>
-                  {idx + 1}
+              <motion.div key={s.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: _idx * 0.03 }} style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ width: 36, textAlign: 'center', fontSize: 14, fontWeight: 700, color: _idx < 3 ? '#C9A96E' : 'rgba(255,255,255,0.3)', flexShrink: 0 }}>
+                  {_idx + 1}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
