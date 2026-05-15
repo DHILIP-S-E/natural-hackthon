@@ -138,19 +138,23 @@ async def _call_gemini_vision(photo_base64: str) -> Dict[str, Any]:
 
 
 def _build_profile_response(profile: CustomerProfile, analysis_id: str = "") -> dict:
-    hair_concerns = (profile.chemical_history or {}).get("hair_concerns", [])
+    meta = profile.chemical_history or {}
+    hair_concerns = meta.get("hair_concerns", [])
     return {
         "profile_id": str(profile.id),
         "customer_id": str(profile.user_id),
-        "face_analysis_id": (profile.chemical_history or {}).get("analysis_id", analysis_id),
+        "face_analysis_id": meta.get("analysis_id", analysis_id),
         "hair_type": profile.hair_type or "",
-        "hair_condition": (profile.chemical_history or {}).get("hair_condition", ""),
+        "hair_condition": meta.get("hair_condition", ""),
         "hair_concerns": hair_concerns,
         "skin_tone": profile.skin_tone or "",
         "skin_condition": profile.skin_type or "",
         "allergies": profile.known_allergies or [],
         "profile_complete": bool(profile.scan_image_url),
-        "user_edited": (profile.chemical_history or {}).get("user_edited", False),
+        "user_edited": meta.get("user_edited", False),
+        "confidence": meta.get("confidence", 0.0),
+        "scan_image_url": profile.scan_image_url or "",
+        "last_scan_at": profile.last_scan_at.isoformat() if profile.last_scan_at else None,
     }
 
 

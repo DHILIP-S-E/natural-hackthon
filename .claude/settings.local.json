@@ -52,7 +52,13 @@
       "PowerShell(Get-Process -Id 38120)",
       "PowerShell(Get-Process -Id 25748)",
       "PowerShell($java = \\(Get-Command flutter | Select-Object -ExpandProperty Source\\) -replace \"flutter.bat\",\"\"; $keytool = Get-ChildItem \"$env:LOCALAPPDATA\\\\Android\\\\Sdk\" -Recurse -Filter \"keytool.exe\" -ErrorAction SilentlyContinue | Select-Object -First 1; if \\($keytool\\) { & $keytool.FullName -list -v -keystore \"$env:USERPROFILE\\\\.android\\\\debug.keystore\" -alias androiddebugkey -storepass android -keypass android 2>&1 | Select-String \"SHA1\" } else { \"keytool not found, searching...\" })",
-      "PowerShell(& \"C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr\\\\bin\\\\keytool.exe\" -list -v -keystore \"$env:USERPROFILE\\\\.android\\\\debug.keystore\" -alias androiddebugkey -storepass android -keypass android 2>&1 | Select-String \"SHA1|SHA256\")"
+      "PowerShell(& \"C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr\\\\bin\\\\keytool.exe\" -list -v -keystore \"$env:USERPROFILE\\\\.android\\\\debug.keystore\" -alias androiddebugkey -storepass android -keypass android 2>&1 | Select-String \"SHA1|SHA256\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\github\\\\natural\\\\backend\\\\app\\\\models\" -Filter \"*.py\")",
+      "Bash(Get-ChildItem -Path 'C:\\\\github\\\\natural\\\\flutter_app\\\\lib' -Recurse -Filter '*.dart')",
+      "Bash(Select-Object FullName)",
+      "Bash(Sort-Object FullName)",
+      "Bash(Get-ChildItem -Path \"C:\\\\github\\\\natural\\\\backend\\\\app\" -Directory)",
+      "PowerShell(Test-NetConnection -ComputerName 64.227.143.244 -Port 5432 -InformationLevel Quiet -WarningAction SilentlyContinue)"
     ]
   }
 }

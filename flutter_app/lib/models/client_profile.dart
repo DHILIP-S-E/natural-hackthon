@@ -10,6 +10,9 @@ class ClientProfile {
   final List<String> allergies;
   final bool profileComplete;
   final bool userEdited;
+  final double confidence;
+  final String scanImageUrl;
+  final String? lastScanAt;
 
   const ClientProfile({
     this.profileId = '',
@@ -23,6 +26,9 @@ class ClientProfile {
     required this.allergies,
     this.profileComplete = false,
     this.userEdited = false,
+    this.confidence = 0.0,
+    this.scanImageUrl = '',
+    this.lastScanAt,
   });
 
   factory ClientProfile.fromJson(Map<String, dynamic> json) => ClientProfile(
@@ -37,6 +43,9 @@ class ClientProfile {
         allergies: List<String>.from(json['allergies'] as List? ?? []),
         profileComplete: json['profile_complete'] as bool? ?? false,
         userEdited: json['user_edited'] as bool? ?? false,
+        confidence: (json['confidence'] as num?)?.toDouble() ?? 0.0,
+        scanImageUrl: json['scan_image_url'] as String? ?? '',
+        lastScanAt: json['last_scan_at'] as String?,
       );
 
   Map<String, dynamic> toJson() => {
@@ -62,6 +71,9 @@ class ClientProfile {
     List<String>? allergies,
     bool? profileComplete,
     bool? userEdited,
+    double? confidence,
+    String? scanImageUrl,
+    String? lastScanAt,
   }) =>
       ClientProfile(
         profileId: profileId ?? this.profileId,
@@ -75,5 +87,8 @@ class ClientProfile {
         allergies: allergies ?? this.allergies,
         profileComplete: profileComplete ?? this.profileComplete,
         userEdited: userEdited ?? this.userEdited,
+        confidence: confidence ?? this.confidence,
+        scanImageUrl: scanImageUrl ?? this.scanImageUrl,
+        lastScanAt: lastScanAt ?? this.lastScanAt,
       );
 }

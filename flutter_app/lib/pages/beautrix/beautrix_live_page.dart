@@ -1,12 +1,37 @@
+import 'dart:convert';
+import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../config/app_colors.dart';
+import '../../core/api/api_client.dart';
+import '../../core/api/endpoints.dart';
+import '../../providers/beauty_providers.dart';
 
 // ---------------------------------------------------------------------------
-// Providers
+// State
 // ---------------------------------------------------------------------------
+
+class _ChatMessage {
+  final String text;
+  final bool isAi;
+  final DateTime time;
+  _ChatMessage({required this.text, required this.isAi}) : time = DateTime.now();
+}
+
+class _MessagesNotifier extends StateNotifier<List<_ChatMessage>> {
+  _MessagesNotifier()
+      : super([
+          _ChatMessage(
+            text: "Hi! I'm Beautrix Live AI. Show me your face, skin, or hair — or just ask me anything about your beauty.",
+            isAi: true,
+          ),
+        ]);
+
+  void add(_ChatMessage msg) => state = [...state, msg];
+  void addAi(String text) => state = [...state, _ChatMessage(text: text, isAi: true)];
+}
 
 final _messagesProvider =
     StateNotifierProvider<_MessagesNotifier, List<_ChatMessage>>(
@@ -15,36 +40,7 @@ final _messagesProvider =
 
 final _isListeningProvider = StateProvider<bool>((ref) => false);
 final _isAnalyzingProvider = StateProvider<bool>((ref) => false);
-final _capturedImageProvider = StateProvider<String?>((ref) => null);
-
-class _ChatMessage {
-  final String text;
-  final bool isAi;
-  final DateTime time;
-  _ChatMessage({required this.text, required this.isAi})
-      : time = DateTime.now();
-}
-
-class _MessagesNotifier extends StateNotifier<List<_ChatMessage>> {
-  _MessagesNotifier()
-      : super([
-          _ChatMessage(
-            text:
-                "Hi! I'm Beautrix Live AI. Show me your face, skin, or hair — or just ask me anything about your beauty routine.",
-            isAi: true,
-          ),
-        ]);
-
-  void addMessage(_ChatMessage msg) => state = [...state, msg];
-
-  void addAiReply(String text) {
-    state = [...state, _ChatMessage(text: text, isAi: true)];
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Concern chips data
-// ---------------------------------------------------------------------------
+final _sessionIdProvider = StateProvider<String?>((ref) => null);
 
 const _concerns = [
   '✨ Skin glow',
@@ -56,46 +52,6 @@ const _concerns = [
   '🌙 Dark circles',
   '🔍 Pores & acne',
 ];
-
-const _aiReplies = {
-  '✨ Skin glow': [
-    "Your skin has a natural warmth to it — a Vitamin C serum in the morning will amplify that glow beautifully.",
-    "For instant radiance, try a gentle glycolic acid toner twice a week. Pair it with SPF 50 in the morning.",
-  ],
-  '💧 Hydration': [
-    "Hydration starts from within. Add a hyaluronic acid serum under your moisturizer — it holds 1000x its weight in water.",
-    "Your skin may be dehydrated rather than dry. Layer a light water-gel moisturizer morning and night.",
-  ],
-  '🧴 Skincare routine': [
-    "For your skin tone, I'd suggest: AM — cleanser → Vitamin C → SPF. PM — cleanser → retinol → peptide moisturizer.",
-    "Start simple: a gentle cleanser, niacinamide serum, and a non-comedogenic moisturizer. Consistency is everything.",
-  ],
-  '💇 Hairstyle': [
-    "Based on what I can see, a textured crop or layered cut would frame your face shape beautifully.",
-    "Consider a mid-fade with soft texture on top — it's modern, low maintenance, and universally flattering.",
-  ],
-  '🧔 Beard style': [
-    "A sculpted short boxed beard would sharpen your jawline and add definition to your face.",
-    "Try a stubble fade — clean neck line, full cheeks. Clean, sharp, and effortlessly stylish.",
-  ],
-  '💄 Makeup look': [
-    "A dewy glass skin base with a subtle nude lip and defined brows would be stunning for your tone.",
-    "Try a warm terracotta eye with a glossy nude lip — it complements warm skin tones perfectly.",
-  ],
-  '🌙 Dark circles': [
-    "Use a caffeine-infused eye cream morning and night. Cold spoon compresses for 5 minutes also work wonders.",
-    "Dark circles here look pigmentation-related. A vitamin K eye cream and good sleep hygiene will help significantly.",
-  ],
-  '🔍 Pores & acne': [
-    "A BHA (salicylic acid) cleanser twice a week will clear pores without stripping your skin.",
-    "For visible pores, niacinamide 10% is your best friend. It visibly tightens and mattifies over 4–6 weeks.",
-  ],
-};
-
-String _getReply(String concern) {
-  final replies = _aiReplies[concern] ?? ["Let me analyze that for you — great question!"];
-  return replies[math.Random().nextInt(replies.length)];
-}
 
 // ---------------------------------------------------------------------------
 // Page
@@ -149,86 +105,146 @@ class _BeautrixLivePageState extends ConsumerState<BeautrixLivePage>
     });
   }
 
-  Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final img = await picker.pickImage(source: ImageSource.camera);
-    if (img == null) return;
+  // Build context string from beauty passport so AI has full profile context
+  String _buildPassportContext(Map<String, dynamic>? passport) {
+    if (passport == null) return '';
+    final profile = passport['profile'] as Map<String, dynamic>? ?? {};
+    final skin = passport['skin'] as Map<String, dynamic>? ?? {};
+    final hair = passport['hair'] as Map<String, dynamic>? ?? {};
+    final parts = <String>[];
 
-    ref.read(_capturedImageProvider.notifier).state = img.path;
-    ref.read(_isAnalyzingProvider.notifier).state = true;
+    if (profile['dominant_archetype'] != null)
+      parts.add('Archetype: ${profile['dominant_archetype']}');
+    if (skin['type'] != null) parts.add('Skin type: ${skin['type']}');
+    if (skin['tone'] != null) parts.add('Skin tone: ${skin['tone']}');
+    if ((skin['concerns'] as List?)?.isNotEmpty == true)
+      parts.add('Skin concerns: ${(skin['concerns'] as List).join(', ')}');
+    if (hair['type'] != null) parts.add('Hair type: ${hair['type']}');
+    if (hair['damage'] != null) parts.add('Hair damage level: ${hair['damage']}/5');
+    if (profile['known_allergies'] != null &&
+        (profile['known_allergies'] as List).isNotEmpty)
+      parts.add('Allergies: ${(profile['known_allergies'] as List).join(', ')}');
 
-    ref.read(_messagesProvider.notifier).addMessage(
-          _ChatMessage(text: "📸 Photo captured. Analyzing...", isAi: false),
-        );
-
-    await Future.delayed(const Duration(seconds: 2));
-
-    ref.read(_isAnalyzingProvider.notifier).state = false;
-    ref.read(_messagesProvider.notifier).addAiReply(
-      "I can see your skin clearly now. You have a warm undertone with slightly oily T-zone. "
-      "I'd recommend a niacinamide serum to balance sebum, and a lightweight gel moisturizer. "
-      "Your overall complexion looks healthy — keep up your current routine!",
-    );
-    _scrollToBottom();
+    return parts.isEmpty ? '' : '[Customer Profile: ${parts.join(' | ')}]';
   }
 
-  Future<void> _toggleListening() async {
-    final isListening = ref.read(_isListeningProvider);
-    ref.read(_isListeningProvider.notifier).state = !isListening;
+  Future<void> _pickImageAndAnalyze() async {
+    final picker = ImagePicker();
+    final img = await picker.pickImage(source: ImageSource.camera, imageQuality: 80);
+    if (img == null) return;
 
-    if (!isListening) {
-      await Future.delayed(const Duration(seconds: 3));
-      if (!mounted) return;
-      ref.read(_isListeningProvider.notifier).state = false;
-      ref.read(_messagesProvider.notifier).addMessage(
-            _ChatMessage(text: "How is my skin looking today?", isAi: false),
-          );
-      await Future.delayed(const Duration(milliseconds: 800));
-      if (!mounted) return;
-      ref.read(_messagesProvider.notifier).addAiReply(
-        "Your skin looks vibrant today! I notice a slight oiliness around the nose — "
-        "blotting papers or a mattifying primer would keep you fresh all day.",
+    ref.read(_isAnalyzingProvider.notifier).state = true;
+    ref.read(_messagesProvider.notifier).add(
+          _ChatMessage(text: '📸 Photo captured. Analyzing...', isAi: false),
+        );
+    _scrollToBottom();
+
+    try {
+      final bytes = await File(img.path).readAsBytes();
+      final base64Image = base64Encode(bytes);
+
+      final api = ref.read(apiClientProvider);
+      final res = await api.post<Map<String, dynamic>>(
+        Endpoints.scanFace,
+        data: {
+          'photo_base64': base64Image,
+          'photo_url': '',
+        },
       );
+
+      final analysis = res.data?['data']?['analysis'] as Map<String, dynamic>?;
+      if (analysis != null) {
+        final skinTone = analysis['skin']?['tone'] ?? 'your skin tone';
+        final skinCond = analysis['skin']?['condition'] ?? 'combination';
+        final skinIssues = (analysis['skin']?['issues'] as List?)?.join(', ') ?? '';
+        final hairType = analysis['hair']?['type'] ?? '';
+        final hairCond = analysis['hair']?['condition'] ?? '';
+
+        final reply = StringBuffer('I can see your face clearly. ');
+        reply.write('You have $skinTone skin with a $skinCond complexion. ');
+        if (skinIssues.isNotEmpty) reply.write('I notice $skinIssues. ');
+        if (hairType.isNotEmpty) reply.write('Your hair appears to be $hairType type ($hairCond). ');
+        reply.write('Would you like personalized recommendations for your skin or hair?');
+
+        ref.read(_messagesProvider.notifier).addAi(reply.toString());
+      } else {
+        ref.read(_messagesProvider.notifier).addAi(
+              'I\'ve analyzed your photo. Ask me anything about what I see!',
+            );
+      }
+    } catch (_) {
+      ref.read(_messagesProvider.notifier).addAi(
+            'I couldn\'t process the photo right now. Try asking me a question directly.',
+          );
+    } finally {
+      if (mounted) ref.read(_isAnalyzingProvider.notifier).state = false;
       _scrollToBottom();
     }
   }
 
-  Future<void> _sendConcern(String concern) async {
-    ref.read(_messagesProvider.notifier).addMessage(
-          _ChatMessage(text: concern, isAi: false),
-        );
-    ref.read(_isAnalyzingProvider.notifier).state = true;
-    _scrollToBottom();
-
-    await Future.delayed(const Duration(milliseconds: 900));
-    if (!mounted) return;
-
-    ref.read(_isAnalyzingProvider.notifier).state = false;
-    ref.read(_messagesProvider.notifier).addAiReply(_getReply(concern));
-    _scrollToBottom();
-  }
-
-  Future<void> _sendText() async {
-    final text = _inputCtrl.text.trim();
-    if (text.isEmpty) return;
+  Future<void> _sendMessage(String text) async {
+    if (text.trim().isEmpty) return;
     _inputCtrl.clear();
 
-    ref.read(_messagesProvider.notifier).addMessage(
-          _ChatMessage(text: text, isAi: false),
+    ref.read(_messagesProvider.notifier).add(
+          _ChatMessage(text: text.trim(), isAi: false),
         );
     ref.read(_isAnalyzingProvider.notifier).state = true;
     _scrollToBottom();
 
-    await Future.delayed(const Duration(milliseconds: 900));
-    if (!mounted) return;
+    try {
+      final api = ref.read(apiClientProvider);
+      final sessionId = ref.read(_sessionIdProvider);
+      final passport = await ref.read(beautyPassportProvider.future).then(
+            (p) => p,
+            onError: (_) => null,
+          );
+      final passportContext = _buildPassportContext(passport);
+      final history = ref
+          .read(_messagesProvider)
+          .map((m) => {'role': m.isAi ? 'assistant' : 'user', 'content': m.text})
+          .toList();
 
-    ref.read(_isAnalyzingProvider.notifier).state = false;
-    ref.read(_messagesProvider.notifier).addAiReply(
-      "Great question! Based on what I can see and your beauty profile, "
-      "I'd recommend focusing on a consistent AM/PM routine. "
-      "Hydration, SPF, and a targeted serum for your concern will deliver visible results in 4–6 weeks.",
-    );
-    _scrollToBottom();
+      final messageWithContext = passportContext.isNotEmpty
+          ? '$passportContext\n\nUser: $text'
+          : text;
+
+      final res = await api.post<Map<String, dynamic>>(
+        Endpoints.chatbot,
+        data: {
+          'message': messageWithContext,
+          'session_id': sessionId,
+          'history': history.length > 10 ? history.sublist(history.length - 10) : history,
+        },
+      );
+
+      final reply = res.data?['reply'] as String? ??
+          'I\'m here to help with your beauty questions!';
+      final newSessionId = res.data?['session_id'] as String?;
+
+      if (newSessionId != null) {
+        ref.read(_sessionIdProvider.notifier).state = newSessionId;
+      }
+
+      if (mounted) ref.read(_messagesProvider.notifier).addAi(reply);
+    } catch (_) {
+      if (mounted) {
+        ref.read(_messagesProvider.notifier).addAi(
+              'I\'m having trouble connecting right now. Please try again.',
+            );
+      }
+    } finally {
+      if (mounted) ref.read(_isAnalyzingProvider.notifier).state = false;
+      _scrollToBottom();
+    }
+  }
+
+  Future<void> _sendConcern(String concern) => _sendMessage(concern);
+
+  void _toggleListening() {
+    final current = ref.read(_isListeningProvider);
+    ref.read(_isListeningProvider.notifier).state = !current;
+    // Voice-to-text integration point — wire speech_to_text here when added
   }
 
   @override
@@ -247,7 +263,8 @@ class _BeautrixLivePageState extends ConsumerState<BeautrixLivePage>
               pulseCtrl: _pulseCtrl,
               scanCtrl: _scanCtrl,
               isListening: isListening,
-              onCapture: _pickImage,
+              onCapture: _pickImageAndAnalyze,
+              onMicTap: _toggleListening,
             ),
             _ConcernChips(onTap: _sendConcern),
             Expanded(
@@ -261,7 +278,7 @@ class _BeautrixLivePageState extends ConsumerState<BeautrixLivePage>
               controller: _inputCtrl,
               isListening: isListening,
               onMicTap: _toggleListening,
-              onSend: _sendText,
+              onSend: () => _sendMessage(_inputCtrl.text),
             ),
           ],
         ),
@@ -396,12 +413,14 @@ class _CameraViewfinder extends StatelessWidget {
   final AnimationController scanCtrl;
   final bool isListening;
   final VoidCallback onCapture;
+  final VoidCallback onMicTap;
 
   const _CameraViewfinder({
     required this.pulseCtrl,
     required this.scanCtrl,
     required this.isListening,
     required this.onCapture,
+    required this.onMicTap,
   });
 
   @override
@@ -425,7 +444,6 @@ class _CameraViewfinder extends StatelessWidget {
         borderRadius: BorderRadius.circular(23),
         child: Stack(
           children: [
-            // AI Listening Waveform / Orb
             if (isListening)
               Center(
                 child: AnimatedBuilder(
@@ -448,7 +466,7 @@ class _CameraViewfinder extends StatelessWidget {
                               BoxShadow(
                                 color: const Color(0xFFC9A96E).withOpacity(0.5),
                                 blurRadius: 10,
-                              )
+                              ),
                             ],
                           ),
                         );
@@ -475,7 +493,6 @@ class _CameraViewfinder extends StatelessWidget {
                   ),
                 ),
               ),
-            // Scan line
             AnimatedBuilder(
               animation: scanCtrl,
               builder: (_, __) {
@@ -499,9 +516,7 @@ class _CameraViewfinder extends StatelessWidget {
                 );
               },
             ),
-            // Corner brackets
             ..._corners(),
-            // Labels
             const Positioned(
               top: 14,
               left: 16,
@@ -529,11 +544,9 @@ class _CameraViewfinder extends StatelessWidget {
                   ),
                   const SizedBox(width: 20),
                   _ViewfinderButton(
-                    icon: isListening
-                        ? Icons.mic_rounded
-                        : Icons.mic_none_rounded,
+                    icon: isListening ? Icons.mic_rounded : Icons.mic_none_rounded,
                     label: isListening ? 'Listening…' : 'Speak',
-                    onTap: () {},
+                    onTap: onMicTap,
                     active: isListening,
                   ),
                 ],
@@ -550,46 +563,29 @@ class _CameraViewfinder extends StatelessWidget {
     const thick = 2.0;
     const color = Color(0xFFC9A96E);
     return [
-      _corner(top: 10, left: 10, size: size, thick: thick, color: color,
-          topLeft: true),
-      _corner(top: 10, right: 10, size: size, thick: thick, color: color,
-          topRight: true),
-      _corner(bottom: 10, left: 10, size: size, thick: thick, color: color,
-          bottomLeft: true),
-      _corner(bottom: 10, right: 10, size: size, thick: thick, color: color,
-          bottomRight: true),
+      _corner(top: 10, left: 10, size: size, thick: thick, color: color, topLeft: true),
+      _corner(top: 10, right: 10, size: size, thick: thick, color: color, topRight: true),
+      _corner(bottom: 10, left: 10, size: size, thick: thick, color: color, bottomLeft: true),
+      _corner(bottom: 10, right: 10, size: size, thick: thick, color: color, bottomRight: true),
     ];
   }
 
   Widget _corner({
-    double? top,
-    double? bottom,
-    double? left,
-    double? right,
-    required double size,
-    required double thick,
-    required Color color,
-    bool topLeft = false,
-    bool topRight = false,
-    bool bottomLeft = false,
-    bool bottomRight = false,
+    double? top, double? bottom, double? left, double? right,
+    required double size, required double thick, required Color color,
+    bool topLeft = false, bool topRight = false,
+    bool bottomLeft = false, bool bottomRight = false,
   }) {
     return Positioned(
-      top: top,
-      bottom: bottom,
-      left: left,
-      right: right,
+      top: top, bottom: bottom, left: left, right: right,
       child: SizedBox(
         width: size,
         height: size,
         child: CustomPaint(
           painter: _CornerPainter(
-            color: color,
-            thickness: thick,
-            topLeft: topLeft,
-            topRight: topRight,
-            bottomLeft: bottomLeft,
-            bottomRight: bottomRight,
+            color: color, thickness: thick,
+            topLeft: topLeft, topRight: topRight,
+            bottomLeft: bottomLeft, bottomRight: bottomRight,
           ),
         ),
       ),
@@ -603,12 +599,9 @@ class _CornerPainter extends CustomPainter {
   final bool topLeft, topRight, bottomLeft, bottomRight;
 
   _CornerPainter({
-    required this.color,
-    required this.thickness,
-    this.topLeft = false,
-    this.topRight = false,
-    this.bottomLeft = false,
-    this.bottomRight = false,
+    required this.color, required this.thickness,
+    this.topLeft = false, this.topRight = false,
+    this.bottomLeft = false, this.bottomRight = false,
   });
 
   @override
@@ -624,21 +617,16 @@ class _CornerPainter extends CustomPainter {
       canvas.drawLine(const Offset(0, 0), Offset(size.width, 0), paint);
     }
     if (topRight) {
-      canvas.drawLine(Offset(size.width, size.height),
-          Offset(size.width, 0), paint);
-      canvas.drawLine(
-          Offset(size.width, 0), Offset(0, 0), paint);
+      canvas.drawLine(Offset(size.width, size.height), Offset(size.width, 0), paint);
+      canvas.drawLine(Offset(size.width, 0), Offset(0, 0), paint);
     }
     if (bottomLeft) {
       canvas.drawLine(const Offset(0, 0), Offset(0, size.height), paint);
-      canvas.drawLine(
-          Offset(0, size.height), Offset(size.width, size.height), paint);
+      canvas.drawLine(Offset(0, size.height), Offset(size.width, size.height), paint);
     }
     if (bottomRight) {
-      canvas.drawLine(
-          Offset(size.width, 0), Offset(size.width, size.height), paint);
-      canvas.drawLine(Offset(size.width, size.height), Offset(0, size.height),
-          paint);
+      canvas.drawLine(Offset(size.width, 0), Offset(size.width, size.height), paint);
+      canvas.drawLine(Offset(size.width, size.height), Offset(0, size.height), paint);
     }
   }
 
@@ -653,10 +641,7 @@ class _ViewfinderButton extends StatelessWidget {
   final bool active;
 
   const _ViewfinderButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.active = false,
+    required this.icon, required this.label, required this.onTap, this.active = false,
   });
 
   @override
@@ -672,18 +657,13 @@ class _ViewfinderButton extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: active
-                  ? const LinearGradient(
-                      colors: [Color(0xFFFF3D7F), Color(0xFFFF6B9D)],
-                    )
+                  ? const LinearGradient(colors: [Color(0xFFFF3D7F), Color(0xFFFF6B9D)])
                   : AppColors.primaryGradient,
             ),
             child: Icon(icon, color: Colors.white, size: 18),
           ),
           const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(color: Colors.white60, fontSize: 10),
-          ),
+          Text(label, style: const TextStyle(color: Colors.white60, fontSize: 10)),
         ],
       ),
     );
@@ -716,9 +696,7 @@ class _ConcernChips extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.primary.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: AppColors.primary.withOpacity(0.3),
-                ),
+                border: Border.all(color: AppColors.primary.withOpacity(0.3)),
               ),
               child: Text(
                 concern,
@@ -746,9 +724,7 @@ class _ChatPanel extends StatelessWidget {
   final ScrollController scrollCtrl;
 
   const _ChatPanel({
-    required this.messages,
-    required this.isAnalyzing,
-    required this.scrollCtrl,
+    required this.messages, required this.isAnalyzing, required this.scrollCtrl,
   });
 
   @override
@@ -758,9 +734,7 @@ class _ChatPanel extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       itemCount: messages.length + (isAnalyzing ? 1 : 0),
       itemBuilder: (_, i) {
-        if (isAnalyzing && i == messages.length) {
-          return const _TypingIndicator();
-        }
+        if (isAnalyzing && i == messages.length) return const _TypingIndicator();
         return _Bubble(msg: messages[i]);
       },
     );
@@ -778,8 +752,7 @@ class _Bubble extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisAlignment:
-            isAi ? MainAxisAlignment.start : MainAxisAlignment.end,
+        mainAxisAlignment: isAi ? MainAxisAlignment.start : MainAxisAlignment.end,
         children: [
           if (isAi) ...[
             Container(
@@ -790,7 +763,9 @@ class _Bubble extends StatelessWidget {
                 gradient: AppColors.primaryGradient,
               ),
               child: const Center(
-                child: Text('B', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                child: Text('B',
+                    style: TextStyle(
+                        color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
               ),
             ),
             const SizedBox(width: 8),
@@ -870,9 +845,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
             child: const Center(
               child: Text('B',
                   style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold)),
+                      color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
             ),
           ),
           const SizedBox(width: 8),
@@ -1000,8 +973,7 @@ class _InputBar extends ConsumerWidget {
                 shape: BoxShape.circle,
                 gradient: AppColors.primaryGradient,
               ),
-              child: const Icon(Icons.send_rounded,
-                  color: Colors.white, size: 18),
+              child: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
             ),
           ),
         ],
