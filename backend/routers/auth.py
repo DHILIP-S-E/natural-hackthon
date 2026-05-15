@@ -508,3 +508,39 @@ async def upload_avatar(
     """Update user avatar URL (in production: handle file upload to S3)."""
     current_user.avatar_url = avatar_url
     return APIResponse(success=True, message="Avatar updated")
+
+
+@router.get("/demo-credentials", response_model=APIResponse)
+async def get_demo_credentials(db: AsyncSession = Depends(get_db)):
+    """Return demo accounts for quick login without hardcoding them."""
+    roles_to_fetch = [
+        (UserRole.CUSTOMER, "Customer", "👤", "#7c6fcd"),
+        (UserRole.STYLIST, "Stylist", "✂️", "#c084fc"),
+        (UserRole.SALON_MANAGER, "Manager", "🏪", "#38bdf8"),
+        (UserRole.FRANCHISE_OWNER, "Franchise", "🏢", "#34d399"),
+        (UserRole.REGIONAL_MANAGER, "Regional", "🗺️", "#fb923c"),
+        (UserRole.SUPER_ADMIN, "Super Admin", "⚡", "#f59e0b"),
+    ]
+    
+    accounts = []
+    for role, label, icon, color in roles_to_fetch:
+        result = await db.execute(
+            select(User).where(User.role == role, User.is_active == True, User.is_deleted == False)
+        )
+        user = result.scalars().first()
+        if user:
+            accounts.append({
+                "email": user.email,
+                "label": label,
+                "icon": icon,
+                "color": color
+            })
+            
+    return APIResponse(
+        success=True,
+        data={
+            "password": settings.DEMO_PASSWORD,
+            "accounts": accounts
+        }
+    )
+

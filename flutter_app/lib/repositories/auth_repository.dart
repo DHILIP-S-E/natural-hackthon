@@ -54,12 +54,14 @@ class AuthRepository {
       Endpoints.loginEmail,
       data: {'email': email, 'password': password},
     );
-    final data = response.data!;
+    final body = response.data!;
+    final data = body['data'] as Map<String, dynamic>;
     await _authService.saveTokens(
-      token: data['jwt_token'] as String,
+      token: data['access_token'] as String,
       refreshToken: data['refresh_token'] as String? ?? '',
     );
-    await _storage.setString(AppConstants.userKey, data['customer_id'] as String);
+    final user = data['user'] as Map<String, dynamic>? ?? {};
+    await _storage.setString(AppConstants.userKey, user['id'] as String? ?? '');
     return data;
   }
 
@@ -93,30 +95,35 @@ class AuthRepository {
     return data;
   }
 
-  Future<void> login({required String email, required String password}) async {
-    final response = await _client.post<Map<String, dynamic>>(
-      Endpoints.login,
-      data: {'email': email, 'password': password},
-    );
-    await _authService.saveTokens(
-      token: response.data!['token'] as String,
-      refreshToken: response.data!['refresh_token'] as String,
-    );
-  }
+  Future<void> login({required String email, required String password}) =>
+      loginEmail(email: email, password: password);
 
-  Future<void> register({
-    required String name,
+  Future<Map<String, dynamic>> register({
+    required String firstName,
+    required String lastName,
     required String email,
     required String password,
+    String? phone,
   }) async {
     final response = await _client.post<Map<String, dynamic>>(
       Endpoints.register,
-      data: {'name': name, 'email': email, 'password': password},
+      data: {
+        'first_name': firstName,
+        'last_name': lastName,
+        'email': email,
+        'password': password,
+        if (phone != null && phone.isNotEmpty) 'phone': phone,
+      },
     );
+    final body = response.data!;
+    final data = body['data'] as Map<String, dynamic>;
     await _authService.saveTokens(
-      token: response.data!['token'] as String,
-      refreshToken: response.data!['refresh_token'] as String,
+      token: data['access_token'] as String,
+      refreshToken: data['refresh_token'] as String? ?? '',
     );
+    final user = data['user'] as Map<String, dynamic>? ?? {};
+    await _storage.setString(AppConstants.userKey, user['id'] as String? ?? '');
+    return data;
   }
 
   Future<void> logout() async {

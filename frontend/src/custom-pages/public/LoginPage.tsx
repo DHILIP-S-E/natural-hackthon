@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { GoogleLogin } from '@react-oauth/google';
@@ -6,14 +6,12 @@ import { useAuthStore, getRoleRedirect } from '../../stores/authStore';
 import api from '../../config/api';
 import { Eye, EyeOff, Sparkles } from 'lucide-react';
 
-const DEMO_ACCOUNTS = [
-  { email: 'customer@aura.in', label: 'Customer' },
-  { email: 'stylist@aura.in', label: 'Stylist' },
-  { email: 'manager@aura.in', label: 'Manager' },
-  { email: 'owner@aura.in', label: 'Franchise' },
-  { email: 'regional@aura.in', label: 'Regional' },
-  { email: 'super@aura.in', label: 'Super Admin' },
-];
+interface DemoAccount {
+  email: string;
+  label: string;
+  icon: string;
+  color: string;
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -21,8 +19,21 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  const [demoAccounts, setDemoAccounts] = useState<DemoAccount[]>([]);
+  const [demoPassword, setDemoPassword] = useState('');
+
   const { login, isAuthenticated, user } = useAuthStore();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    api.get('/auth/demo-credentials').then(res => {
+      if (res.data?.success) {
+        setDemoAccounts(res.data.data.accounts);
+        setDemoPassword(res.data.data.password);
+      }
+    }).catch(console.error);
+  }, []);
 
   // Already logged in — go to the right dashboard
   if (isAuthenticated && user) {
@@ -55,8 +66,8 @@ export default function LoginPage() {
 
   const handleDemo = async (demoEmail: string) => {
     setEmail(demoEmail);
-    setPassword('Aura@2026');
-    await doLogin(demoEmail, 'Aura@2026');
+    setPassword(demoPassword);
+    await doLogin(demoEmail, demoPassword);
   };
 
   const handleGoogleSuccess = async (credentialResponse: { credential?: string }) => {

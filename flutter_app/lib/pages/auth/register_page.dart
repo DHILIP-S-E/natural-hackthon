@@ -115,8 +115,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     notifier.setError(null);
     try {
       final authRepo = ref.read(authRepositoryProvider);
+      final name = _nameController.text.trim().split(' ');
       await authRepo.register(
-        name: _nameController.text.trim(),
+        firstName: name.first,
+        lastName: name.length > 1 ? name.sublist(1).join(' ') : '',
         email: form.email,
         password: form.password,
       );

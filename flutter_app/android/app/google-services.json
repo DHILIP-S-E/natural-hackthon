@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "1030181775683",
+    "project_id": "natural-496416",
+    "storage_bucket": "natural-496416.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1030181775683:android:a1b2c3d4e5f60000",
+        "android_client_info": {
+          "package_name": "com.naturals.aura.flutter_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1030181775683-p11755h362h8ra0qe9p47jdhpi7canqg.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "placeholder_not_used"
+        }
+      ],
+      "services": {}
+    }
+  ],
+  "configuration_version": "1"
+}

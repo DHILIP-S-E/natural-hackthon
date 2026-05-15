@@ -8,6 +8,7 @@ import '../pages/auth/register_page.dart';
 import '../pages/onboarding/face_scan_page.dart';
 import '../pages/onboarding/profile_review_page.dart';
 import '../pages/tempo/home_page.dart';
+import '../pages/auth/signup_page.dart';
 import '../pages/tempo/chat_page.dart';
 import '../pages/tempo/voice_page.dart';
 
@@ -39,6 +40,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/register',
         pageBuilder: (context, state) => _slide(state, const RegisterPage()),
+      ),
+      GoRoute(
+        path: '/signup',
+        pageBuilder: (context, state) => _slide(state, const SignupPage()),
       ),
       GoRoute(
         path: '/face-scan',

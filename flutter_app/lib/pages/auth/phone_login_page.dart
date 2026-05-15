@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../config/app_colors.dart';
+import '../../core/api/api_client.dart';
 import '../../core/auth/auth_service.dart';
 import '../../repositories/auth_repository.dart';
 import '../../widgets/common/app_button.dart';
@@ -56,7 +57,32 @@ class PhoneLoginPage extends ConsumerWidget {
                   _Divider(),
                   const SizedBox(height: 20),
                   const _GoogleSignInButton(),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "Don't have an account? ",
+                        style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+                      ),
+                      GestureDetector(
+                        onTap: () => context.push('/signup'),
+                        child: const Text(
+                          'Sign up',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  const _Divider(text: 'Quick Demo Login'),
+                  const SizedBox(height: 16),
+                  const _DemoLoginGrid(),
+                  const SizedBox(height: 24),
                   Center(
                     child: Text(
                       'By continuing, you agree to our Terms & Privacy Policy',
@@ -291,6 +317,9 @@ class _InputBox extends StatelessWidget {
 }
 
 class _Divider extends StatelessWidget {
+  final String text;
+  const _Divider({this.text = 'or'});
+
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -298,11 +327,227 @@ class _Divider extends StatelessWidget {
         Expanded(child: Divider(color: Colors.grey.shade300)),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text('or',
+          child: Text(text,
               style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
         ),
         Expanded(child: Divider(color: Colors.grey.shade300)),
       ],
+    );
+  }
+}
+
+// ── Demo credentials & Grid ───────────────────────────────────────────────────
+
+class _DemoAccount {
+  final String email;
+  final String label;
+  final String icon;
+  final Color color;
+
+  const _DemoAccount({
+    required this.email,
+    required this.label,
+    required this.icon,
+    required this.color,
+  });
+}
+
+class _DemoLoginGrid extends ConsumerStatefulWidget {
+  const _DemoLoginGrid();
+
+  @override
+  ConsumerState<_DemoLoginGrid> createState() => _DemoLoginGridState();
+}
+
+class _DemoLoginGridState extends ConsumerState<_DemoLoginGrid> {
+  bool _isLoading = false;
+  bool _fetchingAccounts = true;
+  List<_DemoAccount> _accounts = [];
+  String _password = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchDemoAccounts();
+  }
+
+  Future<void> _fetchDemoAccounts() async {
+    try {
+      // Need to import apiClientProvider if not already imported
+      // Actually we have authRepositoryProvider which uses apiClient
+      // We can use the ApiClient directly.
+      final client = ref.read(apiClientProvider);
+      final response = await client.get<Map<String, dynamic>>('/auth/demo-credentials');
+      final data = response.data!['data'];
+      final accountsList = data['accounts'] as List;
+      
+      if (mounted) {
+        setState(() {
+          _password = data['password'] as String;
+          _accounts = accountsList.map((acc) {
+            final colorHex = acc['color'].toString().replaceFirst('#', 'FF');
+            return _DemoAccount(
+              email: acc['email'],
+              label: acc['label'],
+              icon: acc['icon'],
+              color: Color(int.parse(colorHex, radix: 16)),
+            );
+          }).toList();
+          _fetchingAccounts = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _fetchingAccounts = false);
+      }
+    }
+  }
+
+  Future<void> _quickLogin(BuildContext context, _DemoAccount account) async {
+    setState(() => _isLoading = true);
+    try {
+      final result = await ref.read(authRepositoryProvider).loginEmail(
+            email: account.email,
+            password: _password,
+          );
+      if (!context.mounted) return;
+      _navigate(context, result);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_fetchingAccounts) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(16.0),
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+    
+    if (_accounts.isEmpty) return const SizedBox.shrink();
+
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisSpacing: 10,
+      mainAxisSpacing: 10,
+      childAspectRatio: 2.2,
+      children: _accounts.map((account) {
+        return _DemoLoginCard(
+          account: account,
+          demoPassword: _password,
+          isLoading: _isLoading,
+          onTap: () => _quickLogin(context, account),
+        );
+      }).toList(),
+    );
+  }
+}
+
+class _DemoLoginCard extends StatefulWidget {
+  final _DemoAccount account;
+  final String demoPassword;
+  final bool isLoading;
+  final VoidCallback onTap;
+
+  const _DemoLoginCard({
+    required this.account,
+    required this.demoPassword,
+    required this.isLoading,
+    required this.onTap,
+  });
+
+  @override
+  State<_DemoLoginCard> createState() => _DemoLoginCardState();
+}
+
+class _DemoLoginCardState extends State<_DemoLoginCard> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final acc = widget.account;
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: widget.isLoading ? null : widget.onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: _pressed
+              ? acc.color.withOpacity(0.08)
+              : Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: _pressed ? acc.color : acc.color.withOpacity(0.30),
+            width: 1.5,
+          ),
+          boxShadow: _pressed
+              ? [
+                  BoxShadow(
+                    color: acc.color.withOpacity(0.20),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : [],
+        ),
+        child: Opacity(
+          opacity: widget.isLoading ? 0.5 : 1.0,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Row(
+                children: [
+                  Text(acc.icon, style: const TextStyle(fontSize: 13)),
+                  const SizedBox(width: 5),
+                  Flexible(
+                    child: Text(
+                      acc.label,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: acc.color,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 3),
+              Text(
+                '📧 ${acc.email}',
+                style: const TextStyle(
+                  fontSize: 9,
+                  color: Colors.grey,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                '🔑 ${widget.demoPassword}',
+                style: const TextStyle(
+                  fontSize: 9,
+                  color: Colors.grey,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

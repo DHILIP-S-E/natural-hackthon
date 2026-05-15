@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     APP_ENV: str = "development"
     DEBUG: bool = False
     API_V1_PREFIX: str = "/api/v1"
+    
+    DEMO_PASSWORD: str = "Aura@2026"
 
     DATABASE_URL: str = "postgresql+asyncpg://postgres:password@localhost:5432/postgres"
 
