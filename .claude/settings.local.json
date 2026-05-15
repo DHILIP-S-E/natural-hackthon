@@ -13,7 +13,17 @@
       "Bash(git -C /c/github/natural log --oneline)",
       "Bash(git remote *)",
       "Bash(grep -E \"\\\\.tsx$\")",
-      "Bash(xargs -I {} basename {} .py)"
+      "Bash(xargs -I {} basename {} .py)",
+      "Bash(grep -n \"return\\\\|</div>$\" c:/github/natural/frontend/src/pages/manager/ManagerDashboard.tsx)",
+      "Bash(git commit -m ' *)",
+      "Bash(grep -r \"return \\\\[\\\\]\\\\|return {}\\\\|TODO\\\\|FIXME\\\\|stub\\\\|mock\\\\|pass$\" /c/github/natural/backend/app/routers --include=\"*.py\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\github\\\\natural\" -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(cp -r c:/github/natural/backend/app/models c:/github/natural/backend/models)",
+      "Bash(cp -r c:/github/natural/backend/app/routers/. c:/github/natural/backend/routers/)",
+      "Bash(cp c:/github/natural/backend/app/routers/*.py c:/github/natural/backend/routers/)",
+      "Bash(cp -r c:/github/natural/backend/app/agents c:/github/natural/backend/agents)",
+      "Bash(cp -r c:/github/natural/backend/app/services/. c:/github/natural/backend/services/)"
     ]
   }
 }

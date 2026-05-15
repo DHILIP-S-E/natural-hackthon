@@ -2,6 +2,7 @@ fastapi==0.115.0
 uvicorn[standard]==0.30.0
 sqlalchemy[asyncio]==2.0.35
 asyncpg==0.30.0
+aiosqlite==0.20.0
 alembic==1.13.0
 pydantic[email]==2.9.0
 pydantic-settings==2.5.0
@@ -14,6 +15,7 @@ celery[redis]==5.4.0
 redis==5.1.0
 boto3==1.35.0
 openai==1.50.0
+google-generativeai==0.8.0
 sendgrid==6.11.0
 Pillow==10.4.0
 python-dotenv==1.0.1

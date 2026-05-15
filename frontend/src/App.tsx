@@ -6,71 +6,70 @@ import InstallPrompt from './components/ui/InstallPrompt';
 import { lazy, Suspense } from 'react';
 
 // Public pages (keep eagerly loaded — they're the entry points)
-import LandingPage from './pages/public/LandingPage';
-import LoginPage from './pages/public/LoginPage';
-import RegisterPage from './pages/public/RegisterPage';
-import SalonMapPage from './pages/public/SalonMapPage';
+import LandingPage from './custom-pages/public/LandingPage';
+import LoginPage from './custom-pages/public/LoginPage';
+import RegisterPage from './custom-pages/public/RegisterPage';
+import SalonMapPage from './custom-pages/public/SalonMapPage';
 
 // Lazy-loaded pages
-const ManagerDashboard = lazy(() => import('./pages/manager/ManagerDashboard'));
-const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
-const CustomerDashboard = lazy(() => import('./pages/customer/CustomerDashboard'));
-const StylistDashboard = lazy(() => import('./pages/stylist/StylistDashboard'));
-const FranchiseDashboard = lazy(() => import('./pages/franchise/FranchiseDashboard'));
-const RegionalDashboard = lazy(() => import('./pages/regional/RegionalDashboard'));
+const ManagerDashboard = lazy(() => import('./custom-pages/manager/ManagerDashboard'));
+const AdminDashboard = lazy(() => import('./custom-pages/admin/AdminDashboard'));
+const CustomerDashboard = lazy(() => import('./custom-pages/customer/CustomerDashboard'));
+const StylistDashboard = lazy(() => import('./custom-pages/stylist/StylistDashboard'));
+const FranchiseDashboard = lazy(() => import('./custom-pages/franchise/FranchiseDashboard'));
+const RegionalDashboard = lazy(() => import('./custom-pages/regional/RegionalDashboard'));
 
-const QueueManagement = lazy(() => import('./pages/manager/QueueManagement'));
-const TrendIntelligence = lazy(() => import('./pages/manager/TrendIntelligence'));
-const TeamManagement = lazy(() => import('./pages/manager/TeamManagement'));
-const QualityDashboard = lazy(() => import('./pages/manager/QualityDashboard'));
-const FeedbackPage = lazy(() => import('./pages/manager/FeedbackPage'));
-const SOPManagement = lazy(() => import('./pages/manager/SOPManagement'));
-const SoulskinAnalytics = lazy(() => import('./pages/manager/SoulskinAnalytics'));
+const QueueManagement = lazy(() => import('./custom-pages/manager/QueueManagement'));
+const TrendIntelligence = lazy(() => import('./custom-pages/manager/TrendIntelligence'));
+const TeamManagement = lazy(() => import('./custom-pages/manager/TeamManagement'));
+const QualityDashboard = lazy(() => import('./custom-pages/manager/QualityDashboard'));
+const FeedbackPage = lazy(() => import('./custom-pages/manager/FeedbackPage'));
+const SOPManagement = lazy(() => import('./custom-pages/manager/SOPManagement'));
+const SoulskinAnalytics = lazy(() => import('./custom-pages/manager/SoulskinAnalytics'));
 
-const CustomerBookings = lazy(() => import('./pages/customer/CustomerBookings'));
-const BookNew = lazy(() => import('./pages/customer/BookNew'));
-const BeautyPassport = lazy(() => import('./pages/customer/BeautyPassport'));
-const BeautyJourney = lazy(() => import('./pages/customer/BeautyJourney'));
-const HomecarePage = lazy(() => import('./pages/customer/HomecarePage'));
+const CustomerBookings = lazy(() => import('./custom-pages/customer/CustomerBookings'));
+const BookNew = lazy(() => import('./custom-pages/customer/BookNew'));
+const BeautyPassport = lazy(() => import('./custom-pages/customer/BeautyPassport'));
+const BeautyJourney = lazy(() => import('./custom-pages/customer/BeautyJourney'));
+const HomecarePage = lazy(() => import('./custom-pages/customer/HomecarePage'));
 
-const StylistPerformance = lazy(() => import('./pages/stylist/StylistPerformance'));
-const LiveSession = lazy(() => import('./pages/stylist/LiveSession'));
-const StylistCustomers = lazy(() => import('./pages/stylist/StylistCustomers'));
-const StylistTraining = lazy(() => import('./pages/stylist/StylistTraining'));
+const StylistPerformance = lazy(() => import('./custom-pages/stylist/StylistPerformance'));
+const LiveSession = lazy(() => import('./custom-pages/stylist/LiveSession'));
+const StylistCustomers = lazy(() => import('./custom-pages/stylist/StylistCustomers'));
+const StylistTraining = lazy(() => import('./custom-pages/stylist/StylistTraining'));
 
-const SoulskinFlow = lazy(() => import('./pages/soulskin/SoulskinFlow'));
-const ARMirrorPage = lazy(() => import('./pages/mirror/ARMirrorPage'));
-const BIDashboard = lazy(() => import('./pages/analytics/BIDashboard'));
-const PlaceholderDashboard = lazy(() => import('./pages/shared/PlaceholderDashboard'));
+const SoulskinFlow = lazy(() => import('./custom-pages/soulskin/SoulskinFlow'));
+const ARMirrorPage = lazy(() => import('./custom-pages/mirror/ARMirrorPage'));
+const BIDashboard = lazy(() => import('./custom-pages/analytics/BIDashboard'));
 
-const LocationsPage = lazy(() => import('./pages/locations/LocationsPage'));
-const LocationDetailPage = lazy(() => import('./pages/locations/LocationDetailPage'));
-const CompareLocationsPage = lazy(() => import('./pages/locations/CompareLocationsPage'));
+const LocationsPage = lazy(() => import('./custom-pages/locations/LocationsPage'));
+const LocationDetailPage = lazy(() => import('./custom-pages/locations/LocationDetailPage'));
+const CompareLocationsPage = lazy(() => import('./custom-pages/locations/CompareLocationsPage'));
 
-const UsersPage = lazy(() => import('./pages/admin/UsersPage'));
-const AIEnginePage = lazy(() => import('./pages/admin/AIEnginePage'));
-const SystemConfigPage = lazy(() => import('./pages/admin/SystemConfigPage'));
-const RBACPage = lazy(() => import('./pages/admin/RBACPage'));
+const UsersPage = lazy(() => import('./custom-pages/admin/UsersPage'));
+const AIEnginePage = lazy(() => import('./custom-pages/admin/AIEnginePage'));
+const SystemConfigPage = lazy(() => import('./custom-pages/admin/SystemConfigPage'));
+const RBACPage = lazy(() => import('./custom-pages/admin/RBACPage'));
 
-const AlertsHubPage = lazy(() => import('./pages/manager/AlertsHubPage'));
-const LocationSettingsPage = lazy(() => import('./pages/manager/LocationSettingsPage'));
-const EcoTracker = lazy(() => import('./pages/manager/EcoTracker'));
-const InventoryForecast = lazy(() => import('./pages/manager/InventoryForecast'));
+const AlertsHubPage = lazy(() => import('./custom-pages/manager/AlertsHubPage'));
+const LocationSettingsPage = lazy(() => import('./custom-pages/manager/LocationSettingsPage'));
+const EcoTracker = lazy(() => import('./custom-pages/manager/EcoTracker'));
+const InventoryForecast = lazy(() => import('./custom-pages/manager/InventoryForecast'));
 
-const CustomerProfilePage = lazy(() => import('./pages/customer/CustomerProfilePage'));
-const SkinToneBot = lazy(() => import('./pages/customer/SkinToneBot'));
+const CustomerProfilePage = lazy(() => import('./custom-pages/customer/CustomerProfilePage'));
+const SkinToneBot = lazy(() => import('./custom-pages/customer/SkinToneBot'));
 
-const VoiceAssistant = lazy(() => import('./pages/stylist/VoiceAssistant'));
-const AuraScoreDashboard = lazy(() => import('./pages/stylist/AuraScoreDashboard'));
-const FranchisePerformanceDashboard = lazy(() => import('./pages/franchise/FranchisePerformanceDashboard'));
+const VoiceAssistant = lazy(() => import('./custom-pages/stylist/VoiceAssistant'));
+const AuraScoreDashboard = lazy(() => import('./custom-pages/stylist/AuraScoreDashboard'));
+const FranchisePerformanceDashboard = lazy(() => import('./custom-pages/franchise/FranchisePerformanceDashboard'));
 
-const NetworkLeaderboard = lazy(() => import('./pages/shared/NetworkLeaderboard'));
+const NetworkLeaderboard = lazy(() => import('./custom-pages/shared/NetworkLeaderboard'));
 
-const ConsultationForm = lazy(() => import('./pages/public/ConsultationForm'));
-const WaitTimeDisplay = lazy(() => import('./pages/public/WaitTimeDisplay'));
+const ConsultationForm = lazy(() => import('./custom-pages/public/ConsultationForm'));
+const WaitTimeDisplay = lazy(() => import('./custom-pages/public/WaitTimeDisplay'));
 
-const BeautyTwinTimeline = lazy(() => import('./pages/customer/BeautyTwinTimeline'));
-const LoyaltyDashboard = lazy(() => import('./pages/customer/LoyaltyDashboard'));
+const BeautyTwinTimeline = lazy(() => import('./custom-pages/customer/BeautyTwinTimeline'));
+const LoyaltyDashboard = lazy(() => import('./custom-pages/customer/LoyaltyDashboard'));
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },

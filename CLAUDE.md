@@ -60,3 +60,7 @@ cd backend && pip install -r requirements.txt
 - Backend `.env` at `backend/.env` (never commit)
 - Frontend env via Vite `import.meta.env` (prefix `VITE_`)
 - DB: `DATABASE_URL` in backend config (Supabase URL or `sqlite+aiosqlite:///./aura.db`)
+
+## Git Commits
+- Never add `Co-Authored-By: Claude` or any Claude/AI attribution lines to commit messages
+- Commits should only show the human author (DHILIP S E)

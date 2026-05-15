@@ -1,6 +1,12 @@
 import { NavLink, useNavigate, Outlet } from 'react-router-dom';
-import { useState } from 'react';
+import { create } from 'zustand';
 import { motion, AnimatePresence } from 'framer-motion';
+
+// Shared sidebar collapse state so DashboardLayout can sync its margin
+const useSidebarStore = create<{ collapsed: boolean; setCollapsed: (v: boolean) => void }>(set => ({
+  collapsed: false,
+  setCollapsed: (v) => set({ collapsed: v }),
+}));
 import { useAuthStore, getRoleLabel } from '../../stores/authStore';
 import ErrorBoundary from '../ErrorBoundary';
 import {
@@ -8,7 +14,7 @@ import {
   TrendingUp, MessageSquare, Bell, Settings, LogOut, ChevronLeft,
   Sparkles, ClipboardList, GraduationCap, Users2, GitCompare,
   Map, Shield, Brain, Activity, Home, BookOpenCheck, Scan,
-  Heart, Route, User, Leaf, Package, Award, Mic, Clock,
+  Heart, Route, User, Leaf, Package, Award, Mic,
   Zap, GitBranch, Trophy
 } from 'lucide-react';
 import AuraPulse from '../AuraPulse';
@@ -107,7 +113,7 @@ const navItems: Record<string, NavItem[]> = {
 export default function Sidebar() {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
-  const [collapsed, setCollapsed] = useState(false);
+  const { collapsed, setCollapsed } = useSidebarStore();
 
   if (!user) return null;
 
@@ -232,7 +238,7 @@ export default function Sidebar() {
 
 /* Dashboard Layout — sidebar + main content */
 export function DashboardLayout() {
-  const [sidebarCollapsed] = useState(false);
+  const sidebarCollapsed = useSidebarStore(s => s.collapsed);
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
