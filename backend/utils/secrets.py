@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     AWS_SNS_PLATFORM_ARN: str = ""
 
     GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
     GOOGLE_MAPS_API_KEY: str = ""
 
     SMTP_HOST: str = ""

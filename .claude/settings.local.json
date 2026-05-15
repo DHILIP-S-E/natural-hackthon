@@ -40,7 +40,8 @@
       "Bash(ConvertTo-Json)",
       "PowerShell(cd c:\\\\github\\\\natural\\\\backend; python seed_users.py 2>&1 | Where-Object { $_ -notmatch 'RequestsDependencyWarning|urllib3|chardet|warnings.warn|UserWarning|model_data' })",
       "Bash(docker compose *)",
-      "Bash(uvicorn main:app --reload --port 8000)"
+      "Bash(uvicorn main:app --reload --port 8000)",
+      "Bash(flutter create *)"
     ]
   }
 }
